@@ -1,0 +1,7 @@
+*.dat
+*.npy
+*.pyc
+*.xls
+*.xlsx
+*.docx
+.idea
