@@ -5,13 +5,14 @@ import sys
 import operator
 import os
 import os.path
+import time
 from scipy.linalg import solve
 from datetime import datetime
 import scipy.optimize as op
 import scipy.sparse as sp
 import numpy as np
-from mpl_toolkits.mplot3d import axes3d
-import matplotlib.pyplot as plt
+#from mpl_toolkits.mplot3d import axes3d
+#import matplotlib.pyplot as plt
 np.set_printoptions(threshold=sys.maxsize)
 
 #-------2-------#
@@ -45,6 +46,25 @@ hydrogenepsilon = 0.0000701127
 Ck = 8.9875517923E9
 alpha = 1
 
+
+global timerName
+timerName = ""
+timerStart = 0
+def startTimer(name):
+    global timerName
+    if timerName != "":
+        endTimer()
+    timerName = name
+    timerStart = time.clock()
+
+def endTimer():
+    global timerName
+    timerEnd = time.clock()
+    print(timerName, " took ", timerEnd - timerStart, "s")
+    timerName = ""
+
+
+
 #-------4-------#
 def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=0, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=0, ZLEVEL = 0.0, Analytic = False, UserFunction = "", Overwrite = False):
     #-------4.1-------#
@@ -70,6 +90,7 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
     #-------4.2-------#
     else:
         print("Generating Potential...")
+        startTimer("generate")
         LJPOL = np.array([])
         PotentialArrayPath = "Potential%s%sD.npy" %(ProjectName, NDIM)
         GenerateInfofile = "generateinfo%s%sD.dat" %(ProjectName, NDIM)
@@ -300,6 +321,9 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
         except IOError:
             print("Error: The potential did not save. The file you wanted to save to was already opened. Close the file and rerun the program.")
             sys.exit()
+
+        return V
+
 #-------5-------#             
 #OVERWRITING#
 def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL=0.0, YMIN=0.0, YMAX=0.0, YDIV=0, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=0, ZLEVEL=0.0, Analytic=False, UserFunction="", Overwrite=False, N_EVAL = 1, MASS=3678.21, HBAR = 315775.326864, Generate = True):
@@ -378,9 +402,11 @@ def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL=0.0, YMIN=0.0,
             
     #-------5.5-------#
         if Generate == True:
-            generate(ProjectName, NDIM, XMIN, XMAX, XDIV, XLEVEL, YMIN, YMAX, YDIV, YLEVEL, ZMIN, ZMAX, ZDIV, ZLEVEL, Analytic, UserFunction, Overwrite)
+            V = generate(ProjectName, NDIM, XMIN, XMAX, XDIV, XLEVEL, YMIN, YMAX, YDIV, YLEVEL, ZMIN, ZMAX, ZDIV, ZLEVEL, Analytic, UserFunction, Overwrite)
     #-------5.6-------# 
-        ###need hz, hx
+        hx = (XMAX - XMIN) / XDIV
+        hz = (ZMAX - ZMIN) / ZDIV
+
             #fix
         if Generate == False:
             try:
@@ -399,6 +425,8 @@ def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL=0.0, YMIN=0.0,
             
             V= np.load(PotentialArrayPath)
     #-------5.7-------#        
+        startTimer("Create numerov matrices")
+
         if NDIM == 1:
             preFactor1D = -6.0* HBAR * HBAR / (MASS * hz * hz)
             NumerovMatrix1D = []
@@ -703,9 +731,25 @@ def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL=0.0, YMIN=0.0,
             XDIV * YDIV * ZDIV, XDIV * YDIV * ZDIV))
             M = sp.csr_matrix((dataM, (row, col)), shape=(
             XDIV * YDIV * ZDIV, ZDIV * YDIV * ZDIV))
-            return A, M
+            # return A, M
     #-------5.10-------# 
+        #startTimer("convert to dense")
+        #MDense = M.todense()
+        #startTimer("Invert M")
+        #Minv = np.linalg.inv(MDense)
+        #startTimer("Sparsify M")
+        #Minv = sp.coo_matrix(Minv)
+
+        #startTimer("Multiply Minv")
+        #Q = A * Minv
+
+        startTimer("solve eigs")
         eval, evec = sp.linalg.eigs(A=A, k=N_EVAL, M=M, which='SM')
+        
+        #eval, evec = sp.linalg.eigs(A=Q, k=N_EVAL, which='SM')
+
+        endTimer()
+
         norder = eval.argsort()
         eval = eval[norder].real
         evec = evec.T[norder].real
@@ -727,5 +771,5 @@ def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL=0.0, YMIN=0.0,
         print("Eigenvector Analysis File Saved!")
             
 #-------6-------#                 
-generate("splittest", 1, 0.0, 0.0, 0, 13.0, 0.0, 0.0, 0, 13.0, -4.0, 4.0, 15, Overwrite = True)
-                
+#generate("splittest", 1, 0.0, 0.0, 0, 13.0, 0.0, 0.0, 0, 13.0, -4.0, 4.0, 15, Overwrite = True)
+numerov("matrixtesting3D", 3, -1.0, 1.0, 23, 0.0, -1.0, 1.0, 23, 0.0, 3.32, 5.32, 23, 0.0, N_EVAL = 3, Overwrite=True)
