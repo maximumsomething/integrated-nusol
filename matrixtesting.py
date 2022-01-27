@@ -6,8 +6,8 @@ import numpy as np
 N_EVAL = 2
 HBAR = 1.0
 hz = 1.0
-V = np.array([4, 1, 0, 1, 4])
-ZDIV = 5
+V = np.array([0, 1, 2, 3, 4])
+ZDIV = V.size
 MASS = 1.0
 
 
@@ -70,15 +70,36 @@ def newAM():
 #evec = evec.T[norder].real
 #print(eval)
 
-(oldA, oldM) = oldAM()
-(newA, newM) = newAM()
+#(oldA, oldM) = oldAM()
+#(newA, newM) = newAM()
 
-print(oldA.toarray())
-print(oldM.toarray())
-print(newA.toarray())
-print(newM.toarray())
+#print(oldA.toarray())
+#print(oldM.toarray())
+#print(newA.toarray())
+#print(newM.toarray())
 
-print(oldA == newA)
-print(oldM == newM)
+#print(oldA == newA)
+#print(oldM == newM)
+
+
+def standard():
+    #prefactor = -( HBAR * HBAR ) / (2 * MASS)
+    prefactor = 1.0
+    A = sp.diags([[prefactor]*(ZDIV-1), [-2 * prefactor]*ZDIV, [1 * prefactor]*(ZDIV-1)],[-1, 0, 1], shape=(ZDIV, ZDIV))
+    B = sp.diags([[1.0]*(ZDIV-1), [10.0]*ZDIV, [1.0]*(ZDIV-1)], [-1, 0, 1], shape=(ZDIV, ZDIV))
+    Vd = sp.diags(V)
+
+    Binv = sp.linalg.inv(B)
+    #print((Binv * 10000).toarray())
+   # Binv.todense().tofile('blah.csv', sep=',')
+    C = Binv * A + Vd
+    np.savetxt("C.csv", C.todense(), delimiter=',')
+
+    #print(C.toarray())
+
+    print(C.transpose() == C)
+
+standard()
+
 
 
