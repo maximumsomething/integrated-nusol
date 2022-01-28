@@ -46,12 +46,15 @@ hydrogenepsilon = 0.0000701127
 Ck = 8.9875517923E9
 alpha = 1
 
+USE_FEAST=True
+
 
 global timerName
 timerName = ""
 timerStart = 0
 def startTimer(name):
     global timerName
+    global timerStart
     if timerName != "":
         endTimer()
     timerName = name
@@ -59,6 +62,7 @@ def startTimer(name):
 
 def endTimer():
     global timerName
+    global timerStart
     timerEnd = time.clock()
     print(timerName, " took ", timerEnd - timerStart, "s")
     timerName = ""
@@ -742,34 +746,67 @@ def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL=0.0, YMIN=0.0,
 
         #startTimer("Multiply Minv")
         #Q = A * Minv
-
-        startTimer("solve eigs")
-        eval, evec = sp.linalg.eigs(A=A, k=N_EVAL, M=M, which='SM')
         
         #eval, evec = sp.linalg.eigs(A=Q, k=N_EVAL, which='SM')
 
-        endTimer()
+        if USE_FEAST:
+            FEAST_COMMAND="wsl LD_LIBRARY_PATH=/opt/intel/oneapi/compiler/2022.0.2/linux/compiler/lib/intel64_lin/ $(wslpath 'C:\\Users\\Student\\Desktop\\NuSol_original\\lib\\NuSol_FEAST')"
+            FEAST_MATRIX_OUT_PATH = "./FEAST_MATRIX"
 
-        norder = eval.argsort()
-        eval = eval[norder].real
-        evec = evec.T[norder].real
-        f = open(EIGENVALUES_OUT,'w')
-        for e in eval:
-            print >> f, "%.12f" % (e)
-        f.close()
+            # This value must be larger than the expected number of eigenvalues in your search interval, and smaller than NGRIX*NGIDY*NGRIDZ. Otherwise it will not work!
+            FEAST_M = 1000
+            # Lower bound for eigenvalue solver search interval [Hartree]
+            FEAST_E_MIN = 1000.0
+            # Upper bound for eigenvalue solver search interval [Hartree]
+            FEAST_E_MAX = 1000000000.0
 
-        f = open(EIGENVECTORS_OUT,'w')
-        for e in evec:
-          line=''
-          for i in e:
-            line+="%.12e " % i
-          print >> f, line
-        f.close()
-        print("Save complete!")
-        print("Saving Eigenvector Analysis File...")
-        np.save(Eigenvectorsoutarray, evec)
-        print("Eigenvector Analysis File Saved!")
+            startTimer("write FEAST_MATRIX")
+            f = open(FEAST_MATRIX_OUT_PATH,'w')
+
+            (matsize, _) = A.get_shape()
+            print   >>f, "%12d%12d%12d%12d%12d %f %f %f %f %f %f %f %f %f" % \
+                  (matsize, A.getnnz(), XDIV, YDIV, ZDIV, XMIN, XMAX, YMIN, YMAX, ZMIN, ZMAX, hz, hz, hz)
+            # https://stackoverflow.com/a/4319159
+            for row, col, data in zip(A.row, A.col, A.data):
+                print   >>f,"%12d%12d % 18.16E % 18.16E" % (row + 1, col + 1, data, M[row, col])
+
+            f.close()
+
+            startTimer("call FEAST")
+
+            p = subprocess.Popen('%s %f %f %d %s %s %s' % (FEAST_COMMAND,FEAST_E_MIN,FEAST_E_MAX,FEAST_M,FEAST_MATRIX_OUT_PATH,EIGENVALUES_OUT,EIGENVECTORS_OUT),shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            for line in p.stdout.readlines():
+                print (line,)
+            retval = p.wait()
+
+            endTimer()
+
+        else:
+            startTimer("solve eigs")
+            eval, evec = sp.linalg.eigs(A=A, k=N_EVAL, M=M, which='SM')
+            endTimer()
+            
+            norder = eval.argsort()
+            eval = eval[norder].real
+            evec = evec.T[norder].real
+            f = open(EIGENVALUES_OUT,'w')
+            for e in eval:
+                print >> f, "%.12f" % (e)
+            f.close()
+
+            f = open(EIGENVECTORS_OUT,'w')
+            for e in evec:
+              line=''
+              for i in e:
+                line+="%.12e " % i
+              print >> f, line
+            f.close()
+            print("Save complete!")
+            print("Saving Eigenvector Analysis File...")
+            np.save(Eigenvectorsoutarray, evec)
+            print("Eigenvector Analysis File Saved!")
+        
             
 #-------6-------#                 
 #generate("splittest", 1, 0.0, 0.0, 0, 13.0, 0.0, 0.0, 0, 13.0, -4.0, 4.0, 15, Overwrite = True)
-numerov("matrixtesting3D", 3, -1.0, 1.0, 23, 0.0, -1.0, 1.0, 23, 0.0, 3.32, 5.32, 23, 0.0, N_EVAL = 3, Overwrite=True)
+numerov("matrixtesting3D", 3, -1.0, 1.0, 15, 0.0, -1.0, 1.0, 15, 0.0, 3.32, 5.32, 15, 0.0, N_EVAL = 3, Overwrite=False)

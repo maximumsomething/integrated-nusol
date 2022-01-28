@@ -5,3 +5,5 @@
 *.xlsx
 *.docx
 .idea
+venv/
+FEAST_MATRIX
