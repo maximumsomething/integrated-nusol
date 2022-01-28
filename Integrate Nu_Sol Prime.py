@@ -46,7 +46,7 @@ hydrogenepsilon = 0.0000701127
 Ck = 8.9875517923E9
 alpha = 1
 
-USE_FEAST=True
+USE_FEAST=False
 
 
 global timerName
@@ -222,17 +222,17 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
         if np.isnan(np.sum(V)) == False and np.isinf(np.sum(V)) == False:
             print("Maximum potential:", np.amax(V), "\nMinimum potential:", np.amin(V), "\nMinimum potential's array position", np.unravel_index(np.argmin(V, axis=None), V.shape))
         
-            result = (np.where(V == np.amin(V)))
-            min_list = []
+            #result = (np.where(V == np.amin(V)))
+            result = np.unravel_index(np.argmin(V), np.shape(V))
             
     #-------4.6-------#
             
             if NDIM == 1:
-                listofcoordinates = list(zip(ZMAX-result[0]*hz))
-                for coord in listofcoordinates:
-                    min_list.append(coord)
+                #listofcoordinates = list(zip(ZMAX-result[0]*hz))
+                #for coord in listofcoordinates:
+                #    min_list.append(coord)
 
-                print("The z position of the minimum is", (min_list))
+                #print("The z position of the minimum is", (min_list))
                 minimumpot = np.amin(V)
             
             
@@ -246,12 +246,12 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
                 ysecondderivative = float("Nan")
                 xsecondderivative = float("Nan")
             if NDIM == 2:
-                listofcoordinates = list(zip(XMAX-result[0]*hx, YMAX-result[1]*hy))
+                #listofcoordinates = list(zip(XMAX-result[0]*hx, YMAX-result[1]*hy))
             
-                for coord in listofcoordinates:
-                    min_list.append(coord)
+                #for coord in listofcoordinates:
+                #    min_list.append(coord)
 
-                print("The x,y position of the minimum is", (min_list))
+                #print("The x,y position of the minimum is", (min_list))
 
 
                 minimumpot = np.amin(V)
@@ -279,14 +279,15 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
                     delsquared = float("Nan")
                 zsecondderivative = float("Nan")
             if NDIM == 3:
-                listofcoordinates = list(zip(XMAX-result[0]*hx, YMAX-result[1]*hy, ZMAX-result[2]*hz))
-                for coord in listofcoordinates:
-                    min_list.append(coord)
-                print("The x,y,z position of the minimum is", (min_list))
+                #listofcoordinates = list(zip(XMAX-result[0]*hx, YMAX-result[1]*hy, ZMAX-result[2]*hz))
+                #for coord in listofcoordinates:
+                #    min_list.append(coord)
+                #print("The x,y,z position of the minimum is", (min_list))
                 minimumpot = np.amin(V)
                 xresult = result[0]
                 yresult = result[1]
                 zresult = result[2]
+                print(xresult, yresult, zresult)
                 try:
                     xsecondderivative = ((V[xresult+1, yresult, zresult] - 2*minimumpot + V[xresult-1, yresult, zresult])/(hx**2))
                     print("The second partial derivative with respect to x is", xsecondderivative)
@@ -312,7 +313,8 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
                     print("Del Squared is undefined.")
                     delsquared = float("nan")
 
-    #-------4.7-------# 
+    #-------4.7-------#
+        
         print("########################### \nSaving the potential array as", PotentialArrayPath, "\n###########################")
         np.save(PotentialArrayPath, V)
         try:
@@ -325,7 +327,7 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
         except IOError:
             print("Error: The potential did not save. The file you wanted to save to was already opened. Close the file and rerun the program.")
             sys.exit()
-
+        
         return V
 
 #-------5-------#             
@@ -809,4 +811,4 @@ def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL=0.0, YMIN=0.0,
             
 #-------6-------#                 
 #generate("splittest", 1, 0.0, 0.0, 0, 13.0, 0.0, 0.0, 0, 13.0, -4.0, 4.0, 15, Overwrite = True)
-numerov("matrixtesting3D", 3, -1.0, 1.0, 15, 0.0, -1.0, 1.0, 15, 0.0, 3.32, 5.32, 15, 0.0, N_EVAL = 3, Overwrite=False)
+numerov("matrixtesting3D", 3, -1.0, 1.0, 20, 0.0, -1.0, 1.0, 20, 0.0, 3.32, 5.32, 20, 0.0, N_EVAL = 15, Overwrite=True)
