@@ -1,9 +1,8 @@
 import numpy as np
 import subprocess
-import sys
 import operator
 import os
-import os.path
+import sys
 from scipy.linalg import solve
 from datetime import datetime
 import scipy.optimize as op
@@ -47,51 +46,21 @@ def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL=0.0, YMIN=0.0,
 		EIGENVALUES_OUT = "valout%s%sD.dat" %(ProjectName, NDIM)
 		EIGENVECTORS_OUT = "vecout%s%sD.dat" %(ProjectName, NDIM)
 		Eigenvectoranalysis = "vecanalysis%s%sD.dat" %(ProjectName, NDIM)
+
+
+		checkSuccess = checkFileWriteable(EIGENVALUES_OUT, "eigenvalue out", Overwrite)
+		checkSuccess &= checkFileWriteable(EIGENVECTORS_OUT, "eigenvector out", Overwrite)
+		checkSuccess &= checkFileWriteable(Eigenvectoranalysis, "eigenvector analysis", Overwrite)
 		
-		file_exists1 = os.path.exists(PotentialArrayPath)
-		file_exists2 = os.path.exists(GenerateInfofile)
-		file_exists3 = os.path.exists(EIGENVALUES_OUT)
-		file_exists4 = os.path.exists(EIGENVECTORS_OUT)
-		file_exists5 = os.path.exists(Eigenvectoranalysis)
-	#-------5.3-------# 
-		if Overwrite == True:
-			try:
-				myfile = open(PotentialArrayPath, "w")
-				myfile.close()
-				myfile = open(GenerateInfofile, "w")
-				myfile.close()
-				myfile = open(EIGENVALUES_OUT, "w")
-				myfile.close()
-				myfile = open(EIGENVECTORS_OUT, "w")
-				myfile.close()
-				myfile = open(Eigenvectoranalysis, "w")
-				myfile.close()
-			except IOError:
-				print("The file(s) you are trying to save to are currently open. Close the file(s) and rerun the program again.")
-				sys.exit()
-	#-------5.4-------#    
-		if Overwrite == False:
-			if file_exists3 == True:
-				print("The eigenvalue out file name already exists. Change the name or set overwrite to 'True'.")
-				sys.exit()
-			if file_exists4 == True:
-				print("The eigenvector out file name already exists. Change the name or set overwrite to 'True'.")
-				sys.exit()
-			if file_exists5 == True:
-				print("The eigenvector analysis out file name already exists. Change the name or set overwrite to 'True'.")
-				sys.exit()
-			if file_exists1 == True and Generate == True:
-				print("The potential array path you are trying to save to already exists. Change its name or set overwrite to 'True'.")
-				sys.exit()
-			if file_exists2 == True and Generate == True:
-				print("The generate info file you are trying to save to already exists. Change its name or set overwrite to 'True'.")
-				sys.exit()
-			if file_exists1 == False and Generate == False:
-				print("The potential array file you are trying to access for NuSol does not exist.")
-				sys.exit()
-			if file_exists2 == False and Generate == False:
-				print("The generate info file you are trying to acces for NuSol does not exist.")
-				sys.exit()
+		if Generate == False:
+			checkSuccess &= checkFileReadable(PotentialArrayPath, "Potential Array")
+			checkSuccess &= checkFileReadable(GenerateInfofile, "Generate Info")
+		else:
+			checkSuccess &= checkFileWriteable(PotentialArrayPath, "Potential Array", Overwrite)
+			checkSuccess &= checkFileWriteable(GenerateInfofile, "Generate Info", Overwrite)
+
+		if not checkSuccess:
+			sys.exit()
 			
 	#-------5.5-------#
 		if Generate == True:

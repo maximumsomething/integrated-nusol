@@ -72,22 +72,12 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
 		LJPOL = np.array([])
 		PotentialArrayPath = "Potential%s%sD.npy" %(ProjectName, NDIM)
 		GenerateInfofile = "generateinfo%s%sD.dat" %(ProjectName, NDIM)
-		if Overwrite == True:
-			try:
-				myfile = open(PotentialArrayPath, "w")
-				myfile.close()
-				myfile = open(GenerateInfofile, "w")
-				myfile.close()
-			except IOError:
-				print("The file(s) you are trying to save to are currently open. Close the file(s) and rerun the program again.")
-				sys.exit()
-			
-		elif Overwrite == False:
-			file_exists1 = os.path.exists(PotentialArrayPath)
-			file_exists2 = os.path.exists(GenerateInfofile)
-			if file_exists1 == True or file_exists2 == True:
-				print("Overwrite failsafe has been set to false. A Potential Array File or Generating Into File has already been created with that name. Change the name of the file.")
-				sys.exit()
+
+		checkSuccess = checkFileWriteable(PotentialArrayPath, "Potential Array", Overwrite)
+		checkSuccess &= checkFileWriteable(GenerateInfofile, "Generate Info", Overwrite)
+
+		if not checkSuccess:
+			sys.exit()
 				
 	#-------4.3-------#
 		if Analytic == False:
