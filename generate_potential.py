@@ -113,7 +113,7 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
 				if hx!=hy:
 					print("WARNING! GRID SPACING IS UNEVEN! NUSOL WILL FAIL TO CONVERGE")
 				for xval in Xgrid:
-					 for yval in Ygrid:
+					for yval in Ygrid:
 						LJ=0
 						for atom in atoms:
 							jointsigma = (atom.sigma + hydrogensigma)/2
@@ -137,8 +137,8 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
 				if (hx != hy) or (hx != hz) or (hy != hz):
 					print("WARNING! GRID SPACING IS UNEVEN! NUSOL WILL FAIL TO CONVERGE")
 				for xval in Xgrid:
-					 for yval in Ygrid:
-						  for zval in Zgrid:
+					for yval in Ygrid:
+						for zval in Zgrid:
 							LJ=0
 							for atom in atoms:
 								jointsigma = (atom.sigma + hydrogensigma)/2
@@ -294,9 +294,9 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
 		try:
 			f = open(GenerateInfofile, 'w')
 			if np.isnan(np.sum(V)) == False and np.isinf(np.sum(V)) == False:
-				print >>f, "ProjectName = %s NDIM = %d XMIN = %.8f XMAX = %.8f XDIV = %d XLEVEL = %.8f YMIN = %.8f YMAX = %.8f YDIV = %d YLEVEL = %.8f ZMIN = %.8f ZMAX = %.8f ZDIV = %d ZLEVEL = %.8f Analytic = %s UserFunction = %s Overwrite = %s MAXPOT = %.8f MINPOT = %.8f XSECONDDERIVATIVE = %.8f YSECONDDERIVATIVE = %.8f ZSECONDDERIVATIVE = %.8f" % (ProjectName,NDIM,XMIN,XMAX,XDIV,XLEVEL,YMIN,YMAX,YDIV,YLEVEL,ZMIN,ZMAX,ZDIV,ZLEVEL,Analytic,UserFunction,Overwrite, np.amax(V), np.amin(V), xsecondderivative, ysecondderivative, zsecondderivative)
+				print("ProjectName = %s NDIM = %d XMIN = %.8f XMAX = %.8f XDIV = %d XLEVEL = %.8f YMIN = %.8f YMAX = %.8f YDIV = %d YLEVEL = %.8f ZMIN = %.8f ZMAX = %.8f ZDIV = %d ZLEVEL = %.8f Analytic = %s UserFunction = %s Overwrite = %s MAXPOT = %.8f MINPOT = %.8f XSECONDDERIVATIVE = %.8f YSECONDDERIVATIVE = %.8f ZSECONDDERIVATIVE = %.8f" % (ProjectName,NDIM,XMIN,XMAX,XDIV,XLEVEL,YMIN,YMAX,YDIV,YLEVEL,ZMIN,ZMAX,ZDIV,ZLEVEL,Analytic,UserFunction,Overwrite, np.amax(V), np.amin(V), xsecondderivative, ysecondderivative, zsecondderivative), file=f)
 			elif np.isnan(np.sum(V)) == True or np.isinf(np.sum(V)) == True:
-				print >>f, "ProjectName = %s NDIM = %d XMIN = %.8f XMAX = %.8f XDIV = %d XLEVEL = %.8f YMIN = %.8f YMAX = %.8f YDIV = %d YLEVEL = %.8f ZMIN = %.8f ZMAX = %.8f ZDIV = %d ZLEVEL = %.8f Analytic = %s UserFunction = %s Overwrite = %s MAXPOT = DNE MINPOT = DNE XSECONDDERIVATIVE = DNE YSECONDDERIVATIVE = DNE ZSECONDDERIVATIVE = DNE" % (ProjectName,NDIM,XMIN,XMAX,XDIV,XLEVEL,YMIN,YMAX,YDIV,YLEVEL,ZMIN,ZMAX,ZDIV,ZLEVEL,Analytic,UserFunction,Overwrite)
+				print("ProjectName = %s NDIM = %d XMIN = %.8f XMAX = %.8f XDIV = %d XLEVEL = %.8f YMIN = %.8f YMAX = %.8f YDIV = %d YLEVEL = %.8f ZMIN = %.8f ZMAX = %.8f ZDIV = %d ZLEVEL = %.8f Analytic = %s UserFunction = %s Overwrite = %s MAXPOT = DNE MINPOT = DNE XSECONDDERIVATIVE = DNE YSECONDDERIVATIVE = DNE ZSECONDDERIVATIVE = DNE" % (ProjectName,NDIM,XMIN,XMAX,XDIV,XLEVEL,YMIN,YMAX,YDIV,YLEVEL,ZMIN,ZMAX,ZDIV,ZLEVEL,Analytic,UserFunction,Overwrite), file=f)
 			f.close()
 		except IOError:
 			print("Error: The potential did not save. The file you wanted to save to was already opened. Close the file and rerun the program.")

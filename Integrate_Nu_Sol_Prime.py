@@ -156,8 +156,8 @@ def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL=0.0, YMIN=0.0,
 			FORTRANoffset = 1
 			Nele = 0
 
-			for iN in xrange(Nx):
-				for iK in xrange(Ny):
+			for iN in range(Nx):
+				for iK in range(Ny):
 					if (iN - 1 >= 0):
 						iNx = iN * Ny
 						iNy = (iN - 1) * Ny
@@ -192,20 +192,20 @@ def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL=0.0, YMIN=0.0,
 						Nele += 1
 
 					if (iN + 1 < Nx):
-						  iNx = iN * Ny
-						  iNy = (iN + 1) * Ny
-						  iKx = iK
-						  iKy = iK
-						  if (iKy - 1 >= 0):
-								NumerovMatrix2D.append(
-									  [FORTRANoffset + iNx + iKx, FORTRANoffset + iNy + iKy - 1, -  1.0 * preFactor2D, 0.0])
-								Nele += 1
-						  NumerovMatrix2D.append([FORTRANoffset + iNx + iKx, FORTRANoffset + iNy + iKy,
+						iNx = iN * Ny
+						iNy = (iN + 1) * Ny
+						iKx = iK
+						iKy = iK
+						if (iKy - 1 >= 0):
+							NumerovMatrix2D.append(
+									[FORTRANoffset + iNx + iKx, FORTRANoffset + iNy + iKy - 1, -  1.0 * preFactor2D, 0.0])
+							Nele += 1
+							NumerovMatrix2D.append([FORTRANoffset + iNx + iKx, FORTRANoffset + iNy + iKy,
 													-  4.0 * preFactor2D + V[iN + 1, iK], 1.0])
-						  Nele += 1
-						  if (iKy + 1 < Ny):
+							Nele += 1
+							if (iKy + 1 < Ny):
 								NumerovMatrix2D.append(
-									  [FORTRANoffset + iNx + iKx, FORTRANoffset + iNy + iKy + 1, -  1.0 * preFactor2D, 0.0])
+									[FORTRANoffset + iNx + iKx, FORTRANoffset + iNy + iKy + 1, -  1.0 * preFactor2D, 0.0])
 								Nele += 1
 
 
@@ -229,14 +229,14 @@ def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL=0.0, YMIN=0.0,
 			NumerovMatrix3D = []
 			FORTRANoffset = 1
 			Nele = 0
-			for iL in xrange(Nz):
+			for iL in range(Nz):
 			  # process l-1 block
 			  # NumerovMatrix3D.append([ FORTRANoffset + iLx + iNx + iKx , FORTRANoffset + iLy + iNy + iKy - 1 ,  1.0 * self.cfg.preFactor3D , 0.0 ) )
 				if (iL - 1 >= 0):
 					iLx = (iL) * Ny * Nx
 					iLy = (iL - 1) * Ny * Nx
-					for iN in xrange(Nx):
-						for iK in xrange(Ny):
+					for iN in range(Nx):
+						for iK in range(Ny):
 							if (iN - 1 >= 0):
 								iNx = iN * Ny
 								iNy = (iN - 1) * Ny
@@ -297,8 +297,8 @@ def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL=0.0, YMIN=0.0,
 			  # l
 				iLx = (iL) * Ny * Nx
 				iLy = (iL) * Ny * Nx
-				for iN in xrange(Nx):
-					for iK in xrange(Ny):
+				for iN in range(Nx):
+					for iK in range(Ny):
 						if (iN - 1 >= 0):
 							iNx = iN * Ny
 							iNy = (iN - 1) * Ny
@@ -358,8 +358,8 @@ def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL=0.0, YMIN=0.0,
 				if (iL + 1 < Nz):
 					iLx = (iL) * Ny * Nx
 					iLy = (iL + 1) * Ny * Nx
-					for iN in xrange(Nx):
-						for iK in xrange(Ny):
+					for iN in range(Nx):
+						for iK in range(Ny):
 							if (iN - 1 >= 0):
 								iNx = iN * Ny
 								iNy = (iN - 1) * Ny
@@ -453,11 +453,11 @@ def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL=0.0, YMIN=0.0,
 			f = open(FEAST_MATRIX_OUT_PATH,'w')
 
 			(matsize, _) = A.get_shape()
-			print   >>f, "%12d%12d%12d%12d%12d %f %f %f %f %f %f %f %f %f" % \
-				  (matsize, A.getnnz(), XDIV, YDIV, ZDIV, XMIN, XMAX, YMIN, YMAX, ZMIN, ZMAX, hz, hz, hz)
+			print("%12d%12d%12d%12d%12d %f %f %f %f %f %f %f %f %f" % \
+				  (matsize, A.getnnz(), XDIV, YDIV, ZDIV, XMIN, XMAX, YMIN, YMAX, ZMIN, ZMAX, hz, hz, hz), file=f)
 			# https://stackoverflow.com/a/4319159
 			for row, col, data in zip(A.row, A.col, A.data):
-				print   >>f,"%12d%12d % 18.16E % 18.16E" % (row + 1, col + 1, data, M[row, col])
+				print("%12d%12d % 18.16E % 18.16E" % (row + 1, col + 1, data, M[row, col]), file=f)
 
 			f.close()
 
@@ -465,7 +465,7 @@ def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL=0.0, YMIN=0.0,
 
 			p = subprocess.Popen('%s %f %f %d %s %s %s' % (FEAST_COMMAND,FEAST_E_MIN,FEAST_E_MAX,FEAST_M,FEAST_MATRIX_OUT_PATH,EIGENVALUES_OUT,EIGENVECTORS_OUT),shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 			for line in p.stdout.readlines():
-				print (line,)
+				print(line, end="")
 			retval = p.wait()
 
 			endTimer()
@@ -480,15 +480,15 @@ def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL=0.0, YMIN=0.0,
 			evec = evec.T[norder].real
 			f = open(EIGENVALUES_OUT,'w')
 			for e in eval:
-				print >> f, "%.12f" % (e)
+				print("%.12f" % (e), file=f)
 			f.close()
 
 			f = open(EIGENVECTORS_OUT,'w')
 			for e in evec:
-			  line=''
-			  for i in e:
-				line+="%.12e " % i
-			  print >> f, line
+				line=''
+				for i in e:
+					line+="%.12e " % i
+				print(line, file=f)
 			f.close()
 			print("Save complete!")
 			print("Saving Eigenvector Analysis File...")

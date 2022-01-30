@@ -7,3 +7,5 @@
 .idea
 venv/
 FEAST_MATRIX
+*.csv
+.DS_Store

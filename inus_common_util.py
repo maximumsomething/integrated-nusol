@@ -9,11 +9,11 @@ def startTimer(name):
 	if timerName != "":
 		endTimer()
 	timerName = name
-	timerStart = time.clock()
+	timerStart = time.process_time()
 
 def endTimer():
 	global timerName
 	global timerStart
-	timerEnd = time.clock()
-	print(timerName, " took ", timerEnd - timerStart, "s")
+	timerEnd = time.process_time()
+	print(timerName, "took", format(timerEnd - timerStart, '.4f'), "s")
 	timerName = ""
