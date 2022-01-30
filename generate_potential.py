@@ -181,7 +181,7 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
 	#-------4.5-------# 
 
 		print("########################### \n Done generating potential! \n###########################)")
-		print(V)
+		#print(V)
 		
 		if np.isnan(np.sum(V)) == False and np.isinf(np.sum(V)) == False:
 			print("Maximum potential:", np.amax(V), "\nMinimum potential:", np.amin(V), "\nMinimum potential's array position", np.unravel_index(np.argmin(V, axis=None), V.shape))
