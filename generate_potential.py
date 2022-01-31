@@ -80,65 +80,61 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
 			sys.exit()
 				
 	#-------4.3-------#
+		if NDIM == 1:
+			XMIN = XLEVEL
+			XMAX = XLEVEL
+			YMIN = YLEVEL
+			YMAX = YLEVEL
+		if NDIM == 2:
+			ZMIN = ZLEVEL
+			ZMAX = ZLEVEL
+
+
+		if NDIM == 3 or NDIM == 2:
+			hx = (XMAX - XMIN) / (XDIV - 1)
+			hy = (YMAX - YMIN) / (YDIV - 1)
+		else: 
+			hx = 0.0
+			hy = 0.0
+
+		if NDIM == 3 or NDIM == 1:
+			hz = (ZMAX - ZMIN) / (ZDIV - 1)
+		else:
+			hz = 0.0
+
+		if NDIM == 2 and hx != hy:
+			print("WARNING: hx and hy must be equal for NuSol to work, but instead, hx=",hx," and hy=",hy, sep="")
+		elif NDIM == 3 and (hx != hy or hx != hz):
+			print("WARNING: hx, hy, and hz must be equal for NuSol to work, but instead, hx=",hx,", hy=",hy," and hz=",hz, sep="")
+
+
 		if Analytic == False:
 			if NDIM == 1:
-				Zgrid = np.linspace(ZMIN, ZMAX, ZDIV)
-				hz = Zgrid[1] - Zgrid[0]
-				for zval in Zgrid:
-					LJ=0
-					for atom in atoms:
-						jointsigma = (atom.sigma + hydrogensigma)/2
-						jointepsilon = np.sqrt(atom.epsilon * hydrogenepsilon)
-						magnitude = np.sqrt((zval-atom.z)**2+(XLEVEL-atom.x)**2+(YLEVEL-atom.y)**2)
-						LJpointval = 4*jointepsilon*((jointsigma/magnitude)**12-(jointsigma/magnitude)**6)
-						LJ += LJpointval
-					LJPOL = np.append(LJ, LJPOL)
-				LJPOL=np.reshape(LJPOL, (ZDIV))
-				V =(LJPOL)
-			if NDIM == 2:
-				Xgrid = np.linspace(XMIN, XMAX, XDIV)
-				hx = Xgrid[1] - Xgrid[0]
-				Ygrid = np.linspace(YMIN, YMAX, YDIV)
-				hy = Ygrid[1] - Ygrid[0]
-				if hx!=hy:
-					print("WARNING! GRID SPACING IS UNEVEN! NUSOL WILL FAIL TO CONVERGE")
-				for xval in Xgrid:
-					for yval in Ygrid:
-						LJ=0
-						for atom in atoms:
-							jointsigma = (atom.sigma + hydrogensigma)/2
-							jointepsilon = np.sqrt(atom.epsilon * hydrogenepsilon)
-							magnitude = np.sqrt((xval-atom.x)**2+(yval-atom.y)**2+(ZLEVEL-atom.z)**2)
-							LJpointval = 4*jointepsilon*((jointsigma/magnitude)**12-(jointsigma/magnitude)**6)
-							LJ += LJpointval
-						LJPOL = np.append(LJ, LJPOL)
-				LJPOL=np.reshape(LJPOL, (XDIV,YDIV))
-				V =(LJPOL)
-			if NDIM == 3:
-				nZMIN = XMIN
-				nZMAX = XMAX
-				Xgrid = np.linspace(XMIN, XMAX, XDIV)
-				hx = Xgrid[1] - Xgrid[0]
-				Ygrid = np.linspace(YMIN, YMAX, YDIV)
-				hy = Ygrid[1] - Ygrid[0]
-				Zgrid = np.linspace(ZMIN, ZMAX, ZDIV)
-				nZgrid = np.linspace(nZMIN, nZMAX, ZDIV)
-				hz = nZgrid[1] - nZgrid[0]
-				if (hx != hy) or (hx != hz) or (hy != hz):
-					print("WARNING! GRID SPACING IS UNEVEN! NUSOL WILL FAIL TO CONVERGE")
-				for xval in Xgrid:
-					for yval in Ygrid:
-						for zval in Zgrid:
-							LJ=0
-							for atom in atoms:
-								jointsigma = (atom.sigma + hydrogensigma)/2
-								jointepsilon = np.sqrt(atom.epsilon * hydrogenepsilon)
-								magnitude = np.sqrt((xval-atom.x)**2+(yval-atom.y)**2+(zval-atom.z)**2)
-								LJpointval = 4*jointepsilon*((jointsigma/magnitude)**12-(jointsigma/magnitude)**6)
-								LJ += LJpointval
-							LJPOL = np.append(LJ, LJPOL)
-				LJPOL=np.reshape(LJPOL, (XDIV,YDIV,ZDIV))
-				V =(LJPOL)
+				V = np.zeros(ZDIV)
+				for zcoord in range(0, ZDIV):
+					zval = ZMIN + zcoord * hz
+					pot = pointPotential(XLEVEL, YLEVEL, zval)
+					V[zcoord] = pot
+						
+			elif NDIM == 2:
+				V = np.zeros((XDIV, YDIV))
+				for xcoord in range(0, XDIV):
+					for ycoord in range(0, YDIV):
+						xval = XMIN + xcoord * hx
+						yval = YMIN + ycoord * hy
+						pot = pointPotential(xval, yval, ZLEVEL)
+						V[xcoord, ycoord] = pot
+			
+			elif NDIM == 3:
+				V = np.zeros((XDIV, YDIV, ZDIV))
+				for xcoord in range(0, XDIV):
+					for ycoord in range(0, YDIV):
+						for zcoord in range(0, ZDIV):
+							xval = XMIN + xcoord * hx
+							yval = YMIN + ycoord * hy
+							zval = ZMIN + zcoord * hz
+							pot = pointPotential(xval, yval, zval)
+							V[xcoord, ycoord, zcoord] = pot
 				
 	#-------4.4-------#  
 	  ###check if axis right###          
@@ -284,12 +280,25 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
 		try:
 			f = open(GenerateInfofile, 'w')
 			if np.isnan(np.sum(V)) == False and np.isinf(np.sum(V)) == False:
-				print("ProjectName = %s NDIM = %d XMIN = %.8f XMAX = %.8f XDIV = %d XLEVEL = %.8f YMIN = %.8f YMAX = %.8f YDIV = %d YLEVEL = %.8f ZMIN = %.8f ZMAX = %.8f ZDIV = %d ZLEVEL = %.8f Analytic = %s UserFunction = %s Overwrite = %s MAXPOT = %.8f MINPOT = %.8f XSECONDDERIVATIVE = %.8f YSECONDDERIVATIVE = %.8f ZSECONDDERIVATIVE = %.8f" % (ProjectName,NDIM,XMIN,XMAX,XDIV,XLEVEL,YMIN,YMAX,YDIV,YLEVEL,ZMIN,ZMAX,ZDIV,ZLEVEL,Analytic,UserFunction,Overwrite, np.amax(V), np.amin(V), xsecondderivative, ysecondderivative, zsecondderivative), file=f)
+				print("ProjectName = %s NDIM = %d XMIN = %.8f XMAX = %.8f XDIV = %d YMIN = %.8f YMAX = %.8f YDIV = %d ZMIN = %.8f ZMAX = %.8f ZDIV = %d Analytic = %s UserFunction = %s Overwrite = %s MAXPOT = %.8f MINPOT = %.8f XSECONDDERIVATIVE = %.8f YSECONDDERIVATIVE = %.8f ZSECONDDERIVATIVE = %.8f" % (ProjectName,NDIM,XMIN,XMAX,XDIV,YMIN,YMAX,YDIV,ZMIN,ZMAX,ZDIV,Analytic,UserFunction,Overwrite, np.amax(V), np.amin(V), xsecondderivative, ysecondderivative, zsecondderivative), file=f)
 			elif np.isnan(np.sum(V)) == True or np.isinf(np.sum(V)) == True:
-				print("ProjectName = %s NDIM = %d XMIN = %.8f XMAX = %.8f XDIV = %d XLEVEL = %.8f YMIN = %.8f YMAX = %.8f YDIV = %d YLEVEL = %.8f ZMIN = %.8f ZMAX = %.8f ZDIV = %d ZLEVEL = %.8f Analytic = %s UserFunction = %s Overwrite = %s MAXPOT = DNE MINPOT = DNE XSECONDDERIVATIVE = DNE YSECONDDERIVATIVE = DNE ZSECONDDERIVATIVE = DNE" % (ProjectName,NDIM,XMIN,XMAX,XDIV,XLEVEL,YMIN,YMAX,YDIV,YLEVEL,ZMIN,ZMAX,ZDIV,ZLEVEL,Analytic,UserFunction,Overwrite), file=f)
+				print("ProjectName = %s NDIM = %d XMIN = %.8f XMAX = %.8f XDIV = %d YMIN = %.8f YMAX = %.8f YDIV = %d ZMIN = %.8f ZMAX = %.8f ZDIV = %d Analytic = %s UserFunction = %s Overwrite = %s MAXPOT = DNE MINPOT = DNE XSECONDDERIVATIVE = DNE YSECONDDERIVATIVE = DNE ZSECONDDERIVATIVE = DNE" % (ProjectName,NDIM,XMIN,XMAX,XDIV,YMIN,YMAX,YDIV,ZMIN,ZMAX,ZDIV,Analytic,UserFunction,Overwrite), file=f)
 			f.close()
 		except IOError:
 			print("Error: The potential did not save. The file you wanted to save to was already opened. Close the file and rerun the program.")
 			sys.exit()
 		
 		return V
+
+
+
+def pointPotential(xval, yval, zval):
+	LJ = 0
+	for atom in atoms:
+		jointsigma = (atom.sigma + hydrogensigma)/2
+		jointepsilon = np.sqrt(atom.epsilon * hydrogenepsilon)
+		magnitude = np.sqrt((xval-atom.x)**2+(yval-atom.y)**2+(zval-atom.z)**2)
+		LJpointval = 4*jointepsilon*((jointsigma/magnitude)**12-(jointsigma/magnitude)**6)
+		LJ += LJpointval
+
+	return LJ

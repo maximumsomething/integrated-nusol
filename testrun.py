@@ -12,5 +12,5 @@ from Integrate_Nu_Sol_Prime import *
 #generate("splittest", 1, 0.0, 0.0, 0, 13.0, 0.0, 0.0, 0, 13.0, -4.0, 4.0, 15, Overwrite = True)
 
 numerov("matrixtesting3D", 3, -1.0, 1.0, 10, 0.0, -1.0, 1.0, 10, 0.0, 3.32, 5.32, 10, 0.0, N_EVAL = 3, Overwrite=True)
-#numerov("matrixtesting2D", 2, -1.0, 1.0, 20, 0.0, -1.0, 1.0, 20, 0.0, 0.0, 0.0, 0, 0.0, N_EVAL = 3, Overwrite=True)
-#numerov("matrixtesting1D", 1, 0.0, 0.0, 0, 0.0, 0.0, 0.0, 0, 0.0, 3.32, 5.32, 30, 0.0, N_EVAL = 3, Overwrite=True)
+#numerov("matrixtesting2D", 2, XMIN=-1.0, XMAX=1.0, XDIV=20, YMIN=-1.0, YMAX=1.0, YDIV=20, ZLEVEL=4.32, N_EVAL = 3, Overwrite=True)
+#numerov("matrixtesting1D", 1, XLEVEL=0.0, YLEVEL=0.0, ZMIN=3.32, ZMAX=5.32, ZDIV=30, N_EVAL = 3, Overwrite=True)

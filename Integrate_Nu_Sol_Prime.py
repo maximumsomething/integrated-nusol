@@ -18,7 +18,7 @@ USE_FEAST=False
 
 #-------5-------#             
 #OVERWRITING#
-def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL=0.0, YMIN=0.0, YMAX=0.0, YDIV=0, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=0, ZLEVEL=0.0, Analytic=False, UserFunction="", Overwrite=False, N_EVAL = 1, MASS=3678.21, HBAR = 315775.326864, Generate = True):
+def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL=0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL=0.0, Analytic=False, UserFunction="", Overwrite=False, N_EVAL = 1, MASS=3678.21, HBAR = 315775.326864, Generate = True):
 	#-------5.1-------# 
 		if type(Generate) != bool: 
 			print("Generate is not in a boolean format. Make sure it is either true or false.")
@@ -72,9 +72,9 @@ def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL=0.0, YMIN=0.0,
 
 		startTimer("Create numerov matrices")
 
-		if NDIM == 2 or NDIM == 3: hx = (XMAX - XMIN) / XDIV
-		if NDIM == 2 or NDIM == 3: hy = (YMAX - YMIN) / YDIV
-		if NDIM == 1 or NDIM == 3: hz = (ZMAX - ZMIN) / ZDIV
+		if NDIM == 2 or NDIM == 3: hx = (XMAX - XMIN) / (XDIV - 1)
+		if NDIM == 2 or NDIM == 3: hy = (YMAX - YMIN) / (YDIV - 1)
+		if NDIM == 1 or NDIM == 3: hz = (ZMAX - ZMIN) / (ZDIV - 1)
 
 		if NDIM == 1:
 			A, M = createNumerovMatrices1D(V, ZDIV, hz, MASS, HBAR)
