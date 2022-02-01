@@ -20,5 +20,19 @@ from generate_potential import *
 
 #generate("2GraphicsTesting", GridInfo(3, -1.0, 1.0, 15, 0.0, -1.0, 1.0, 15, 0.0, 3.32, 5.32, 15, 0.0, False, False), Overwrite = True, PrintAnalysis = True)
 #Contour("2GraphicsTesting", 4.32)
-PotentialZGraphics("2GraphicsTesting", 1.0, 1.0)
+# PotentialZGraphics("2GraphicsTesting", 1.0, 1.0)
 
+# Accuracy testing
+grid = GridInfo(3, -1.0, 1.0, 20, 0.0, -1.0, 1.0, 20, 0.0, 3.32, 5.32, 20, 0.0)
+
+numerov("LJnew", grid, N_EVAL = 7, IgnoreM = True)
+numerov("LJold", grid, N_EVAL = 7, IgnoreM = False)
+
+grid.Analytic = True
+grid.UserFunction = "x**2 + y**2 + z**2"
+numerov("firstOrderNew", grid, N_EVAL = 7, IgnoreM = True)
+numerov("firstOrderOld", grid, N_EVAL = 7, IgnoreM = False)
+
+grid.UserFunction = "x**2 + y**2 + z**2 + 0.5 * (x**4 + y**4 + z**4)"
+numerov("secondOrderNew", grid, N_EVAL = 7, IgnoreM = True)
+numerov("secondOrderOld", grid, N_EVAL = 7, IgnoreM = False)

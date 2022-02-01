@@ -18,7 +18,7 @@ USE_FEAST=False
 
 #-------5-------#             
 #OVERWRITING#
-def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=3678.21, HBAR = 315775.326864, Generate = True):
+def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=3678.21, HBAR = 315775.326864, IgnoreM = True, Generate = True):
 	g = gridInfo # for shortness
 #-------5.1-------# 
 	if type(Generate) != bool: 
@@ -91,7 +91,12 @@ def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=3678.21, HB
 	if USE_FEAST:
 		runFeast(A, M, EIGENVALUES_OUT, EIGENVECTORS_OUT)
 	else:
-		eval, evec = solveEigs(A, M, N_EVAL)
+		startTimer("solve eigs")
+		if IgnoreM:
+			eval, evec = solveEigsApprox(A, N_EVAL)
+		else:
+			eval, evec = solveEigs(A, M, N_EVAL)
+		endTimer()
 		writeEigs(eval, evec, EIGENVALUES_OUT, EIGENVECTORS_OUT, Eigenvectoranalysis)
 
 #-------5.7-------# 
@@ -402,6 +407,12 @@ def createNumerovMatrices3D(V, XDIV, YDIV, ZDIV, hx, MASS, HBAR):
 	return (A, M)
 
 #-------5.10-------# 
+
+def solveEigsApprox(A, N_EVAL):
+	eval, evec =  sp.linalg.eigs(A=A, k=N_EVAL, which='SM')
+	eval /= 12
+	return eval, evec
+
 def solveEigs(A, M, N_EVAL):
 	#startTimer("convert to dense")
 	#MDense = M.todense()
@@ -415,11 +426,7 @@ def solveEigs(A, M, N_EVAL):
 	
 	#eval, evec = sp.linalg.eigs(A=Q, k=N_EVAL, which='SM')
 
-	startTimer("solve eigs")
-	eval, evec = sp.linalg.eigs(A=A, k=N_EVAL, M=M, which='SM')
-	endTimer()
-
-	return eval, evec
+	return sp.linalg.eigs(A=A, k=N_EVAL, M=M, which='SM')
 
 def writeEigs(eval, evec, EIGENVALUES_OUT, EIGENVECTORS_OUT, Eigenvectoranalysis):
 	

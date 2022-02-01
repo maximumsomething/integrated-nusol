@@ -236,7 +236,7 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 				try:
 					Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
 					z = Zgrid
-					V = np.array(eval(UserFunction))
+					V = np.array(eval(g.UserFunction))
 					hz = Zgrid[1] - Zgrid[0]
 				except NameError:
 					print("Invalid function. Make sure your function is a function of z and that all non-elementary operations are preceded by 'np.'")
@@ -248,8 +248,8 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 					Ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
 					hy = Ygrid[1] - Ygrid[0]
 					x,y = np.meshgrid(Xgrid,Ygrid)
-					print(UserFunction)
-					V = np.array(eval(UserFunction))
+					print(g.UserFunction)
+					V = np.array(eval(g.UserFunction))
 				except NameError:
 					print("Invalid function. Make sure your function is a function of x and y and that all non-elementary operations are proceded by 'np.'")
 					sys.exit()
@@ -262,7 +262,7 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 					Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
 					hz = Zgrid[1]-Zgrid[0]
 					x,y,z = np.meshgrid(Xgrid, Ygrid, Zgrid)
-					V = np.array(eval(UserFunction))
+					V = np.array(eval(g.UserFunction))
 				except NameError:
 					print("Invalid function. Make sure your function is a function of x and y and that all non-elementary operations are proceded by 'np.'")
 					sys.exit()
