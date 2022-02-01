@@ -48,7 +48,7 @@ alpha = 1
 
 class GridInfo:
 
-	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, Analytic = False, UserFunction = False):
+	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, Analytic = False, UserFunction = ""):
 
 		# We need to check here because the load function might give None instead of letting it default
 		if XDIV == None: XDIV = 1
@@ -69,6 +69,8 @@ class GridInfo:
 			raise ValueError("Analytic is not in a boolean format. Make sure it is either true or false.")
 		elif type(UserFunction) != str and Analytic == True:
 			raise ValueError("Function is not in a string format. Make sure the function is in quotation marks and contains only approproiate characters.")
+
+		self.loadedFromFile = None
 
 		self.NDIM = NDIM
 
@@ -96,26 +98,54 @@ class GridInfo:
 			self.ZMIN = ZLEVEL
 			self.ZMAX = ZLEVEL
 
-	def save(self, ProjectName, file):
+	def saveToFile(self, ProjectName, file):
 		print("ProjectName=%s\nNDIM=%d\nXMIN=%.8f\nXMAX=%.8f\nXDIV=%d\nXLEVEL=%.8f\nYMIN=%.8f\nYMAX=%.8f\nYDIV=%d\nYLEVEL=%.8f\nZMIN=%.8f\nZMAX=%.8f\nZDIV=%d\nZLEVEL=%.8f\nAnalytic=%s\nUserFunction=%s\n" % (ProjectName, self.NDIM, self.XMIN, self.XMAX, self.XDIV, self.XLEVEL, self.YMIN, self.YMAX, self.YDIV, self.YLEVEL, self.ZMIN, self.ZMAX, self.ZDIV, self.ZLEVEL, self.Analytic, self.UserFunction), file=file)
+
+	def getFilename(ProjectName, NDIM):
+		return "generateinfo%s%sD.dat" %(ProjectName, NDIM)
+
+	def save(self, ProjectName):
+		filename = GridInfo.getFilename(ProjectName, self.NDIM)
+		if filename != self.loadedFromFile: # Don't overwrite file that we loaded from
+			try:
+				f = open(filename, 'w')
+				self.saveToFile(ProjectName, f)
+					
+			except IOError:
+				print("WARNING: The potential file", filename, "did not save. The file you wanted to save to was already opened.")
+
+	def load(ProjectName, NDIM):
+		return GridInfo.loadFromFile(GridInfo.getFilename(ProjectName, NDIM))
 	
-	def load(path):
-		file = open(path, "r")
-		lines = file.readlines()
-		# A dictionary that returns None instead of throwing an error when a missing key is accessed
-		v = collections.defaultdict(lambda: None, {})
-		linecount = 0
-		for line in lines:
-			linecount += 1
-			line = line.strip()
-			if len(line) > 0:
-				splitted = line.split('=', 2)
-				if len(splitted) < 2: print("Syntax error loading line ", linecount, ': "', line, '"', sep='')
-				v[splitted[0]] = tryParseStringToType(splitted[1])
+	"""
+	File format:
+	key=value
+	#comment
+	"""
+	def loadFromFile(path):
+		try:
+			file = open(path, "r")
+			lines = file.readlines()
+			# A dictionary that returns None instead of throwing an error when a missing key is accessed
+			v = collections.defaultdict(lambda: None, {})
+			linecount = 0
+			for line in lines:
+				linecount += 1
+				line = line.strip()
+				if len(line) > 0 and not line.startswith("#"):
+					splitted = line.split('=', 2)
+					if len(splitted) < 2: print("Syntax error loading line ", linecount, ': "', line, '"', sep='')
+					v[splitted[0].strip()] = tryParseStringToType(splitted[1].strip())
 
-		print("read from file:", v)
+			print("read from file:", v)
 
-		return GridInfo(v['NDIM'], v['XMIN'], v['XMAX'], v['XDIV'], v['XLEVEL'], v['YMIN'], v['YMAX'], v['YDIV'], v['YLEVEL'], v['ZMIN'], v['ZMAX'], v['ZDIV'], v['ZLEVEL'], v['Analytic'], v['UserFunction'])
+			gridInfo =  GridInfo(v['NDIM'], v['XMIN'], v['XMAX'], v['XDIV'], v['XLEVEL'], v['YMIN'], v['YMAX'], v['YDIV'], v['YLEVEL'], v['ZMIN'], v['ZMAX'], v['ZDIV'], v['ZLEVEL'], v['Analytic'], v['UserFunction'])
+			gridInfo.loadedFromFile = path
+			return gridInfo
+		except IOError:
+			print("Error: Could not read potential file", path)
+			sys.exit()
+
 
 def tryParseStringToType(string):
 	try:
@@ -341,13 +371,8 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 			
 			print("########################### \nSaving the potential array as", PotentialArrayPath, "\n###########################")
 			np.save(PotentialArrayPath, V)
-			try:
-				f = open(GenerateInfofile, 'w')
-				g.save(ProjectName, f)
-				
-			except IOError:
-				print("Error: The potential did not save. The file you wanted to save to was already opened. Close the file and rerun the program.")
-				sys.exit()
+			
+			g.save(ProjectName)
 		
 		return V
 

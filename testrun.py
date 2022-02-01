@@ -11,7 +11,7 @@ from generate_potential import *
 # def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=0, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=0, ZLEVEL = 0.0, Analytic = False, UserFunction = "", Overwrite = False):
 
 #generate("matrixtesting3D", GridInfo(3, -1.0, 1.0, 10, 0.0, -1.0, 1.0, 10, 0.0, 3.32, 5.32, 10, 0.0), Overwrite=True)
-generate("matrixtesting3D", GridInfo.load("generateinfomatrixtesting3D3D.dat"), Overwrite=True)
+generate("matrixtesting3D", GridInfo.load("matrixtesting3D", 3), Overwrite=True)
 
 
 #numerov("matrixtesting3D", GridInfo(3, -1.0, 1.0, 10, 0.0, -1.0, 1.0, 10, 0.0, 3.32, 5.32, 10, 0.0), N_EVAL = 3, Overwrite=True)

@@ -20,80 +20,79 @@ USE_FEAST=False
 #OVERWRITING#
 def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=3678.21, HBAR = 315775.326864, Generate = True):
 	g = gridInfo # for shortness
-	#-------5.1-------# 
-		if type(Generate) != bool: 
-			print("Generate is not in a boolean format. Make sure it is either true or false.")
-			sys.exit()
-		elif type(Overwrite) != bool:
-			print("Overwrite is not in a boolean format. Make sure it is either true or false.")
-			sys.exit()
-		elif type(ProjectName) != str:
-			print("Project name is not in a string format. Make sure the Project name is in quotation marks and contains only appropriate characters.")
-			sys.exit()
-		elif type(N_EVAL) != int or N_EVAL<1:
-			print("N_EVAL must be an integer greater than zero.")
-			sys.exit()
-		elif type(MASS) != float or MASS <= 0:
-			print("MASS must be a float and be greater than zero.")
-			sys.exit()
-		elif type(HBAR) != float:
-			print("HBAR must be a float.")
-			sys.exit()
-
-		  
-	#-------5.2-------# 
-		PotentialArrayPath = "Potential%s%sD.npy" %(ProjectName, g.NDIM)
-		GenerateInfofile = "generateinfo%s%sD.dat" %(ProjectName, g.NDIM)
-		EIGENVALUES_OUT = "valout%s%sD.dat" %(ProjectName, g.NDIM)
-		EIGENVECTORS_OUT = "vecout%s%sD.dat" %(ProjectName, g.NDIM)
-		Eigenvectoranalysis = "vecanalysis%s%sD.npy" %(ProjectName, g.NDIM)
+#-------5.1-------# 
+	if type(Generate) != bool: 
+		print("Generate is not in a boolean format. Make sure it is either true or false.")
+		sys.exit()
+	elif type(Overwrite) != bool:
+		print("Overwrite is not in a boolean format. Make sure it is either true or false.")
+		sys.exit()
+	elif type(ProjectName) != str:
+		print("Project name is not in a string format. Make sure the Project name is in quotation marks and contains only appropriate characters.")
+		sys.exit()
+	elif type(N_EVAL) != int or N_EVAL<1:
+		print("N_EVAL must be an integer greater than zero.")
+		sys.exit()
+	elif type(MASS) != float or MASS <= 0:
+		print("MASS must be a float and be greater than zero.")
+		sys.exit()
+	elif type(HBAR) != float:
+		print("HBAR must be a float.")
+		sys.exit()
 
 
-		checkSuccess = checkFileWriteable(EIGENVALUES_OUT, "eigenvalue out", Overwrite)
-		checkSuccess &= checkFileWriteable(EIGENVECTORS_OUT, "eigenvector out", Overwrite)
-		checkSuccess &= checkFileWriteable(Eigenvectoranalysis, "eigenvector analysis", Overwrite)
+#-------5.2-------# 
+	PotentialArrayPath = "Potential%s%sD.npy" %(ProjectName, g.NDIM)
+	GenerateInfofile = "generateinfo%s%sD.dat" %(ProjectName, g.NDIM)
+	EIGENVALUES_OUT = "valout%s%sD.dat" %(ProjectName, g.NDIM)
+	EIGENVECTORS_OUT = "vecout%s%sD.dat" %(ProjectName, g.NDIM)
+	Eigenvectoranalysis = "vecanalysis%s%sD.npy" %(ProjectName, g.NDIM)
+
+
+	checkSuccess = checkFileWriteable(EIGENVALUES_OUT, "eigenvalue out", Overwrite)
+	checkSuccess &= checkFileWriteable(EIGENVECTORS_OUT, "eigenvector out", Overwrite)
+	checkSuccess &= checkFileWriteable(Eigenvectoranalysis, "eigenvector analysis", Overwrite)
+	
+	if Generate == False:
+		checkSuccess &= checkFileReadable(PotentialArrayPath, "Potential Array")
+		checkSuccess &= checkFileReadable(GenerateInfofile, "Generate Info")
+	else:
+		checkSuccess &= checkFileWriteable(PotentialArrayPath, "Potential Array", Overwrite)
+		checkSuccess &= checkFileWriteable(GenerateInfofile, "Generate Info", Overwrite)
+
+	if not checkSuccess:
+		sys.exit()
 		
-		if Generate == False:
-			checkSuccess &= checkFileReadable(PotentialArrayPath, "Potential Array")
-			checkSuccess &= checkFileReadable(GenerateInfofile, "Generate Info")
-		else:
-			checkSuccess &= checkFileWriteable(PotentialArrayPath, "Potential Array", Overwrite)
-			checkSuccess &= checkFileWriteable(GenerateInfofile, "Generate Info", Overwrite)
-
-		if not checkSuccess:
-			sys.exit()
-			
-	#-------5.5-------#
-		if Generate == True:
-			V = generate(ProjectName, g, Overwrite)
-	#-------5.6-------# 
-		else:
-			pass
-			# Todo: read generated data
-
-
-		startTimer("Create numerov matrices")
-
-		if g.NDIM == 2 or g.NDIM == 3: hx = (g.XMAX - g.XMIN) / (g.XDIV - 1)
-		if g.NDIM == 2 or g.NDIM == 3: hy = (g.YMAX - g.YMIN) / (g.YDIV - 1)
-		if g.NDIM == 1 or g.NDIM == 3: hz = (g.ZMAX - g.ZMIN) / (g.ZDIV - 1)
-
-		if g.NDIM == 1:
-			A, M = createNumerovMatrices1D(V, g.ZDIV, hz, MASS, HBAR)
-		elif g.NDIM == 2:
-			if hx != hy:
-				print("WARNING: hx and hy must be equal for NuSol to work, but instead, hx=",hx," and hy=",hy, sep="")
-			A, M = createNumerovMatrices2D(V, g.XDIV, g.YDIV, hx, MASS, HBAR)
-		elif g.NDIM == 3:
-			if hx != hy or hx != hz:
-				print("WARNING: hx, hy, and hz must be equal for NuSol to work, but instead, hx=",hx,", hy=",hy," and hz=",hz, sep="")
-			A, M = createNumerovMatrices3D(V, g.XDIV, g.YDIV, g.ZDIV, hx, MASS, HBAR)
+#-------5.5-------#
+	if Generate == True:
+		V = generate(ProjectName, g, Overwrite)
+#-------5.6-------# 
+	else:
+		V = np.load(PotentialArrayPath)
 		
-		if USE_FEAST:
-			runFeast(A, M, EIGENVALUES_OUT, EIGENVECTORS_OUT)
-		else:
-			eval, evec = solveEigs(A, M, N_EVAL)
-			writeEigs(eval, evec, EIGENVALUES_OUT, EIGENVECTORS_OUT, Eigenvectoranalysis)
+
+	startTimer("Create numerov matrices")
+
+	if g.NDIM == 2 or g.NDIM == 3: hx = (g.XMAX - g.XMIN) / (g.XDIV - 1)
+	if g.NDIM == 2 or g.NDIM == 3: hy = (g.YMAX - g.YMIN) / (g.YDIV - 1)
+	if g.NDIM == 1 or g.NDIM == 3: hz = (g.ZMAX - g.ZMIN) / (g.ZDIV - 1)
+
+	if g.NDIM == 1:
+		A, M = createNumerovMatrices1D(V, g.ZDIV, hz, MASS, HBAR)
+	elif g.NDIM == 2:
+		if hx != hy:
+			print("WARNING: hx and hy must be equal for NuSol to work, but instead, hx=",hx," and hy=",hy, sep="")
+		A, M = createNumerovMatrices2D(V, g.XDIV, g.YDIV, hx, MASS, HBAR)
+	elif g.NDIM == 3:
+		if hx != hy or hx != hz:
+			print("WARNING: hx, hy, and hz must be equal for NuSol to work, but instead, hx=",hx,", hy=",hy," and hz=",hz, sep="")
+		A, M = createNumerovMatrices3D(V, g.XDIV, g.YDIV, g.ZDIV, hx, MASS, HBAR)
+	
+	if USE_FEAST:
+		runFeast(A, M, EIGENVALUES_OUT, EIGENVECTORS_OUT)
+	else:
+		eval, evec = solveEigs(A, M, N_EVAL)
+		writeEigs(eval, evec, EIGENVALUES_OUT, EIGENVECTORS_OUT, Eigenvectoranalysis)
 
 #-------5.7-------# 
 def createNumerovMatrices1D(V, ZDIV, hz, MASS, HBAR):
