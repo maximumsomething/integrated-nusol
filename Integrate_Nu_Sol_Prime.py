@@ -18,7 +18,8 @@ USE_FEAST=False
 
 #-------5-------#             
 #OVERWRITING#
-def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL=0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL=0.0, Analytic=False, UserFunction="", Overwrite=False, N_EVAL = 1, MASS=3678.21, HBAR = 315775.326864, Generate = True):
+def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=3678.21, HBAR = 315775.326864, Generate = True):
+	g = gridInfo # for shortness
 	#-------5.1-------# 
 		if type(Generate) != bool: 
 			print("Generate is not in a boolean format. Make sure it is either true or false.")
@@ -41,11 +42,11 @@ def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL=0.0, YMIN=0.0,
 
 		  
 	#-------5.2-------# 
-		PotentialArrayPath = "Potential%s%sD.npy" %(ProjectName, NDIM)
-		GenerateInfofile = "generateinfo%s%sD.dat" %(ProjectName, NDIM)
-		EIGENVALUES_OUT = "valout%s%sD.dat" %(ProjectName, NDIM)
-		EIGENVECTORS_OUT = "vecout%s%sD.dat" %(ProjectName, NDIM)
-		Eigenvectoranalysis = "vecanalysis%s%sD.npy" %(ProjectName, NDIM)
+		PotentialArrayPath = "Potential%s%sD.npy" %(ProjectName, g.NDIM)
+		GenerateInfofile = "generateinfo%s%sD.dat" %(ProjectName, g.NDIM)
+		EIGENVALUES_OUT = "valout%s%sD.dat" %(ProjectName, g.NDIM)
+		EIGENVECTORS_OUT = "vecout%s%sD.dat" %(ProjectName, g.NDIM)
+		Eigenvectoranalysis = "vecanalysis%s%sD.npy" %(ProjectName, g.NDIM)
 
 
 		checkSuccess = checkFileWriteable(EIGENVALUES_OUT, "eigenvalue out", Overwrite)
@@ -64,54 +65,35 @@ def numerov(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL=0.0, YMIN=0.0,
 			
 	#-------5.5-------#
 		if Generate == True:
-			V = generate(ProjectName, NDIM, XMIN, XMAX, XDIV, XLEVEL, YMIN, YMAX, YDIV, YLEVEL, ZMIN, ZMAX, ZDIV, ZLEVEL, Analytic, UserFunction, Overwrite)
+			V = generate(ProjectName, g, Overwrite)
 	#-------5.6-------# 
 		else:
-			XDIV, YDIV, ZDIV, V = readGenerateInfo(GenerateInfofile, PotentialArrayPath)
+			pass
+			# Todo: read generated data
 
 
 		startTimer("Create numerov matrices")
 
-		if NDIM == 2 or NDIM == 3: hx = (XMAX - XMIN) / (XDIV - 1)
-		if NDIM == 2 or NDIM == 3: hy = (YMAX - YMIN) / (YDIV - 1)
-		if NDIM == 1 or NDIM == 3: hz = (ZMAX - ZMIN) / (ZDIV - 1)
+		if g.NDIM == 2 or g.NDIM == 3: hx = (g.XMAX - g.XMIN) / (g.XDIV - 1)
+		if g.NDIM == 2 or g.NDIM == 3: hy = (g.YMAX - g.YMIN) / (g.YDIV - 1)
+		if g.NDIM == 1 or g.NDIM == 3: hz = (g.ZMAX - g.ZMIN) / (g.ZDIV - 1)
 
-		if NDIM == 1:
-			A, M = createNumerovMatrices1D(V, ZDIV, hz, MASS, HBAR)
-		elif NDIM == 2:
+		if g.NDIM == 1:
+			A, M = createNumerovMatrices1D(V, g.ZDIV, hz, MASS, HBAR)
+		elif g.NDIM == 2:
 			if hx != hy:
 				print("WARNING: hx and hy must be equal for NuSol to work, but instead, hx=",hx," and hy=",hy, sep="")
-			A, M = createNumerovMatrices2D(V, XDIV, YDIV, hx, MASS, HBAR)
-		elif NDIM == 3:
+			A, M = createNumerovMatrices2D(V, g.XDIV, g.YDIV, hx, MASS, HBAR)
+		elif g.NDIM == 3:
 			if hx != hy or hx != hz:
 				print("WARNING: hx, hy, and hz must be equal for NuSol to work, but instead, hx=",hx,", hy=",hy," and hz=",hz, sep="")
-			A, M = createNumerovMatrices3D(V, XDIV, YDIV, ZDIV, hx, MASS, HBAR)
+			A, M = createNumerovMatrices3D(V, g.XDIV, g.YDIV, g.ZDIV, hx, MASS, HBAR)
 		
 		if USE_FEAST:
 			runFeast(A, M, EIGENVALUES_OUT, EIGENVECTORS_OUT)
 		else:
 			eval, evec = solveEigs(A, M, N_EVAL)
 			writeEigs(eval, evec, EIGENVALUES_OUT, EIGENVECTORS_OUT, Eigenvectoranalysis)
-
-#-------5.6-------# 
-def readGenerateInfo(GenerateInfofile, PotentialArrayPath):
-	#fix
-	try:
-		myfile = open(GenerateInfofile, 'w')
-	except IOError:
-		print("Please close the Generate Info File and re-run the program again.")
-		sys.exit()
-	lines = myfile.readlines()
-	for line in lines:
-		line = line.strip()
-		line = line.split()
-   
-	XDIV = float(line[14])
-	YDIV = float(line[26])
-	ZDIV = float(line[38])
-	
-	V = np.load(PotentialArrayPath)
-	return XDIV, YDIV, ZDIV, V
 
 #-------5.7-------# 
 def createNumerovMatrices1D(V, ZDIV, hz, MASS, HBAR):

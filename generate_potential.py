@@ -8,6 +8,7 @@ from scipy.linalg import solve
 import scipy.optimize as op
 import scipy.sparse as sp
 import numpy as np
+import collections
 np.set_printoptions(threshold=sys.maxsize)
 
 from inus_common_util import *
@@ -43,26 +44,97 @@ hydrogenepsilon = 0.0000701127
 Ck = 8.9875517923E9
 alpha = 1
 
+
+
+class GridInfo:
+
+	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, Analytic = False, UserFunction = False):
+
+		# We need to check here because the load function might give None instead of letting it default
+		if XDIV == None: XDIV = 1
+		if YDIV == None: YDIV = 1
+		if ZDIV == None: ZDIV = 1
+
+		if type(NDIM) != int or NDIM>3 or NDIM<1:
+			raise ValueError("Number of diminsions must be in an integer format and be no greater than 3 and no less than 1.")
+		elif (NDIM == 2 or NDIM == 3) and (type(XMIN)!= float or type(YMIN)!= float or type(XMAX)!= float or type(YMAX)!= float or type(XDIV)!= int or type(YDIV)!= int or XMIN>=XMAX or YMIN>=YMAX or XDIV<= 0 or YDIV<=0):
+			raise ValueError("XMIN, XMAX, YMIN, YMAX must all be floats and subject XMIN=<XMAX and YMIN=<YMAX. XDIV, YDIV must be integers greater than zero.")
+		elif (NDIM == 1 or NDIM ==3) and (type(ZMIN)!= float or type(ZMAX)!= float or type(ZDIV)!= int or ZMIN>=ZMAX or ZDIV<=0):
+			raise ValueError("ZMIN, ZMAX must be floats and subject to ZMIN=<ZMAX. ZDIV must be an integer greater than zero.")
+		elif NDIM == 1 and (type(XLEVEL)!= float or type(YLEVEL)!= float):
+			raise ValueError("XLEVEL, YLEVEL must be floats.")
+		elif NDIM ==2 and type(ZLEVEL)!= float:
+			raise ValueError("ZLEVEL must be a float.")
+		elif type(Analytic) != bool:
+			raise ValueError("Analytic is not in a boolean format. Make sure it is either true or false.")
+		elif type(UserFunction) != str and Analytic == True:
+			raise ValueError("Function is not in a string format. Make sure the function is in quotation marks and contains only approproiate characters.")
+
+		self.NDIM = NDIM
+
+		self.XMIN = XMIN
+		self.XMAX = XMAX
+		self.XLEVEL = XLEVEL
+		self.XDIV = XDIV
+		self.YMIN = YMIN
+		self.YMAX = YMAX
+		self.YLEVEL = YLEVEL
+		self.YDIV = YDIV
+		self.ZMIN = ZMIN
+		self.ZMAX = ZMAX
+		self.ZLEVEL = ZLEVEL
+		self.ZDIV = ZDIV
+		self.Analytic = Analytic
+		self.UserFunction = UserFunction
+
+		if NDIM == 1:
+			self.XMIN = XLEVEL
+			self.XMAX = XLEVEL
+			self.YMIN = YLEVEL
+			self.YMAX = YLEVEL
+		if NDIM == 2:
+			self.ZMIN = ZLEVEL
+			self.ZMAX = ZLEVEL
+
+	def save(self, ProjectName, file):
+		print("ProjectName=%s\nNDIM=%d\nXMIN=%.8f\nXMAX=%.8f\nXDIV=%d\nXLEVEL=%.8f\nYMIN=%.8f\nYMAX=%.8f\nYDIV=%d\nYLEVEL=%.8f\nZMIN=%.8f\nZMAX=%.8f\nZDIV=%d\nZLEVEL=%.8f\nAnalytic=%s\nUserFunction=%s\n" % (ProjectName, self.NDIM, self.XMIN, self.XMAX, self.XDIV, self.XLEVEL, self.YMIN, self.YMAX, self.YDIV, self.YLEVEL, self.ZMIN, self.ZMAX, self.ZDIV, self.ZLEVEL, self.Analytic, self.UserFunction), file=file)
+	
+	def load(path):
+		file = open(path, "r")
+		lines = file.readlines()
+		# A dictionary that returns None instead of throwing an error when a missing key is accessed
+		v = collections.defaultdict(lambda: None, {})
+		linecount = 0
+		for line in lines:
+			linecount += 1
+			line = line.strip()
+			if len(line) > 0:
+				splitted = line.split('=', 2)
+				if len(splitted) < 2: print("Syntax error loading line ", linecount, ': "', line, '"', sep='')
+				v[splitted[0]] = tryParseStringToType(splitted[1])
+
+		print("read from file:", v)
+
+		return GridInfo(v['NDIM'], v['XMIN'], v['XMAX'], v['XDIV'], v['XLEVEL'], v['YMIN'], v['YMAX'], v['YDIV'], v['YLEVEL'], v['ZMIN'], v['ZMAX'], v['ZDIV'], v['ZLEVEL'], v['Analytic'], v['UserFunction'])
+
+def tryParseStringToType(string):
+	try:
+		return int(string)
+	except ValueError:
+		try:
+			return float(string)
+		except ValueError:
+			if string == "True": return True
+			elif string == "False": return False
+			else: return string
+
+
+
 #-------4-------#
-def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=0, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=0, ZLEVEL = 0.0, Analytic = False, UserFunction = "", Overwrite = False, PrintAnalysis = True):
-	#-------4.1-------#
-	if type(ProjectName) != str:
-		print("Project name is not in a string format. Make sure the Project name is in quotation marks and contains only appropriate characters.")
-	elif type(NDIM) != int or NDIM>3 or NDIM<1:
-		print("Number of diminsions must be in an integer format and be no greater than 3 and no less than 1.")
-	elif (NDIM == 2 or NDIM == 3) and (type(XMIN)!= float or type(YMIN)!= float or type(XMAX)!= float or type(YMAX)!= float or type(XDIV)!= int or type(YDIV)!= int or XMIN>=XMAX or YMIN>=YMAX or XDIV<= 0 or YDIV<=0):
-		print("XMIN, XMAX, YMIN, YMAX must all be floats and subject XMIN=<XMAX and YMIN=<YMAX. XDIV, YDIV must be integers greater than zero.")
-	elif (NDIM == 1 or NDIM ==3) and (type(ZMIN)!= float or type(ZMAX)!= float or type(ZDIV)!= int or ZMIN>=ZMAX or ZDIV<=0):
-		print("ZMIN, ZMAX must be floats and subject to ZMIN=<ZMAX. ZDIV must be an integer greater than zero.")
-	elif NDIM == 1 and (type(XLEVEL)!= float or type(YLEVEL)!= float):
-		print("XLEVEL, YLEVEL must be floats.")
-	elif NDIM ==2 and type(ZLEVEL)!= float:
-		print("ZLEVEL must be a float.")
-	elif type(Analytic) != bool:
-		print("Analytic is not in a boolean format. Make sure it is either true or false.")
-	elif type(UserFunction) != str and Analytic == True:
-			print("Function is not in a string format. Make sure the function is in quotation marks and contains only approproiate characters.")
-	elif type(Overwrite) != bool:
+def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
+	g = gridInfo # for shortness
+		#-------4.1-------#
+	if type(Overwrite) != bool:
 		print("Overwrite is not in a boolean format. Make sure it is either true or false.")
 		sys.exit()
 	#-------4.2-------#
@@ -70,8 +142,8 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
 		print("Generating Potential...")
 		startTimer("generate")
 		LJPOL = np.array([])
-		PotentialArrayPath = "Potential%s%sD.npy" %(ProjectName, NDIM)
-		GenerateInfofile = "generateinfo%s%sD.dat" %(ProjectName, NDIM)
+		PotentialArrayPath = "Potential%s%sD.npy" %(ProjectName, g.NDIM)
+		GenerateInfofile = "generateinfo%s%sD.dat" %(ProjectName, g.NDIM)
 
 		checkSuccess = checkFileWriteable(PotentialArrayPath, "Potential Array", Overwrite)
 		checkSuccess &= checkFileWriteable(GenerateInfofile, "Generate Info", Overwrite)
@@ -80,79 +152,70 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
 			sys.exit()
 				
 	#-------4.3-------#
-		if NDIM == 1:
-			XMIN = XLEVEL
-			XMAX = XLEVEL
-			YMIN = YLEVEL
-			YMAX = YLEVEL
-		if NDIM == 2:
-			ZMIN = ZLEVEL
-			ZMAX = ZLEVEL
 
-
-		if NDIM == 3 or NDIM == 2:
-			hx = (XMAX - XMIN) / (XDIV - 1)
-			hy = (YMAX - YMIN) / (YDIV - 1)
+		if g.NDIM == 3 or g.NDIM == 2:
+			hx = (g.XMAX - g.XMIN) / (g.XDIV - 1)
+			hy = (g.YMAX - g.YMIN) / (g.YDIV - 1)
 		else: 
 			hx = 0.0
 			hy = 0.0
 
-		if NDIM == 3 or NDIM == 1:
-			hz = (ZMAX - ZMIN) / (ZDIV - 1)
+		if g.NDIM == 3 or g.NDIM == 1:
+			hz = (g.ZMAX - g.ZMIN) / (g.ZDIV - 1)
 		else:
 			hz = 0.0
 
-		if NDIM == 2 and hx != hy:
+		if g.NDIM == 2 and hx != hy:
 			print("WARNING: hx and hy must be equal for NuSol to work, but instead, hx=",hx," and hy=",hy, sep="")
-		elif NDIM == 3 and (hx != hy or hx != hz):
+		elif g.NDIM == 3 and (hx != hy or hx != hz):
 			print("WARNING: hx, hy, and hz must be equal for NuSol to work, but instead, hx=",hx,", hy=",hy," and hz=",hz, sep="")
 
 
-		if Analytic == False:
-			if NDIM == 1:
-				V = np.zeros(ZDIV)
-				for zcoord in range(0, ZDIV):
-					zval = ZMIN + zcoord * hz
-					pot = pointPotential(XLEVEL, YLEVEL, zval)
+		if g.Analytic == False:
+			if g.NDIM == 1:
+				V = np.zeros(g.ZDIV)
+				for zcoord in range(0, g.ZDIV):
+					zval = g.ZMIN + zcoord * hz
+					pot = pointPotential(g.XLEVEL, g.YLEVEL, zval)
 					V[zcoord] = pot
 
-			elif NDIM == 2:
-				V = np.zeros((XDIV, YDIV))
-				for xcoord in range(0, XDIV):
-					for ycoord in range(0, YDIV):
-						xval = XMIN + xcoord * hx
-						yval = YMIN + ycoord * hy
-						pot = pointPotential(xval, yval, ZLEVEL)
+			elif g.NDIM == 2:
+				V = np.zeros((g.XDIV, g.YDIV))
+				for xcoord in range(0, g.XDIV):
+					for ycoord in range(0, g.YDIV):
+						xval = g.XMIN + xcoord * hx
+						yval = g.YMIN + ycoord * hy
+						pot = pointPotential(xval, yval, g.ZLEVEL)
 						V[xcoord, ycoord] = pot
 			
-			elif NDIM == 3:
-				V = np.zeros((XDIV, YDIV, ZDIV))
-				for xcoord in range(0, XDIV):
-					for ycoord in range(0, YDIV):
-						for zcoord in range(0, ZDIV):
-							xval = XMIN + xcoord * hx
-							yval = YMIN + ycoord * hy
-							zval = ZMIN + zcoord * hz
+			elif g.NDIM == 3:
+				V = np.zeros((g.XDIV, g.YDIV, g.ZDIV))
+				for xcoord in range(0, g.XDIV):
+					for ycoord in range(0, g.YDIV):
+						for zcoord in range(0, g.ZDIV):
+							xval = g.XMIN + xcoord * hx
+							yval = g.YMIN + ycoord * hy
+							zval = g.ZMIN + zcoord * hz
 							pot = pointPotential(xval, yval, zval)
 							V[xcoord, ycoord, zcoord] = pot
 				
 	#-------4.4-------#  
 	  ###check if axis right###          
-		elif Analytic == True:
-			if NDIM == 1:
+		elif g.Analytic == True:
+			if g.NDIM == 1:
 				try:
-					Zgrid = np.linspace(ZMIN, ZMAX, ZDIV)
+					Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
 					z = Zgrid
 					V = np.array(eval(UserFunction))
 					hz = Zgrid[1] - Zgrid[0]
 				except NameError:
 					print("Invalid function. Make sure your function is a function of z and that all non-elementary operations are preceded by 'np.'")
 					sys.exit()
-			if NDIM == 2:
+			if g.NDIM == 2:
 				try:
-					Xgrid = np.linspace(XMIN, XMAX, XDIV)
+					Xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
 					hx = Xgrid[1] - Xgrid[0]
-					Ygrid = np.linspace(YMIN, YMAX, YDIV)
+					Ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
 					hy = Ygrid[1] - Ygrid[0]
 					x,y = np.meshgrid(Xgrid,Ygrid)
 					print(UserFunction)
@@ -160,13 +223,13 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
 				except NameError:
 					print("Invalid function. Make sure your function is a function of x and y and that all non-elementary operations are proceded by 'np.'")
 					sys.exit()
-			if NDIM == 3:
+			if g.NDIM == 3:
 				try:
-					Xgrid = np.linspace(XMIN, XMAX, XDIV)
+					Xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
 					hx = Xgrid[1] - Xgrid[0]
-					Ygrid = np.linspace(YMIN, YMAX, YDIV)
+					Ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
 					hy = Ygrid[1] - Ygrid[0]
-					Zgrid = np.linspace(ZMIN, ZMAX, ZDIV)
+					Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
 					hz = Zgrid[1]-Zgrid[0]
 					x,y,z = np.meshgrid(Xgrid, Ygrid, Zgrid)
 					V = np.array(eval(UserFunction))
@@ -188,8 +251,8 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
 				
 		#-------4.6-------#
 				
-				if NDIM == 1:
-					#listofcoordinates = list(zip(ZMAX-result[0]*hz))
+				if g.NDIM == 1:
+					#listofcoordinates = list(zip(g.ZMAX-result[0]*hz))
 					#for coord in listofcoordinates:
 					#    min_list.append(coord)
 
@@ -206,8 +269,8 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
 						zsecondderivative = float("Nan")
 					ysecondderivative = float("Nan")
 					xsecondderivative = float("Nan")
-				if NDIM == 2:
-					#listofcoordinates = list(zip(XMAX-result[0]*hx, YMAX-result[1]*hy))
+				if g.NDIM == 2:
+					#listofcoordinates = list(zip(g.XMAX-result[0]*hx, g.YMAX-result[1]*hy))
 				
 					#for coord in listofcoordinates:
 					#    min_list.append(coord)
@@ -239,8 +302,8 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
 						print("Del Squared is undefined.")
 						delsquared = float("Nan")
 					zsecondderivative = float("Nan")
-				if NDIM == 3:
-					#listofcoordinates = list(zip(XMAX-result[0]*hx, YMAX-result[1]*hy, ZMAX-result[2]*hz))
+				if g.NDIM == 3:
+					#listofcoordinates = list(zip(g.XMAX-result[0]*hx, g.YMAX-result[1]*hy, g.ZMAX-result[2]*hz))
 					#for coord in listofcoordinates:
 					#    min_list.append(coord)
 					#print("The x,y,z position of the minimum is", (min_list))
@@ -280,11 +343,8 @@ def generate(ProjectName, NDIM, XMIN=0.0, XMAX=0.0, XDIV=0, XLEVEL = 0.0, YMIN=0
 			np.save(PotentialArrayPath, V)
 			try:
 				f = open(GenerateInfofile, 'w')
-				if np.isnan(np.sum(V)) == False and np.isinf(np.sum(V)) == False:
-					print("ProjectName = %s NDIM = %d XMIN = %.8f XMAX = %.8f XDIV = %d YMIN = %.8f YMAX = %.8f YDIV = %d ZMIN = %.8f ZMAX = %.8f ZDIV = %d Analytic = %s UserFunction = %s Overwrite = %s MAXPOT = %.8f MINPOT = %.8f XSECONDDERIVATIVE = %.8f YSECONDDERIVATIVE = %.8f ZSECONDDERIVATIVE = %.8f" % (ProjectName,NDIM,XMIN,XMAX,XDIV,YMIN,YMAX,YDIV,ZMIN,ZMAX,ZDIV,Analytic,UserFunction,Overwrite, np.amax(V), np.amin(V), xsecondderivative, ysecondderivative, zsecondderivative), file=f)
-				elif np.isnan(np.sum(V)) == True or np.isinf(np.sum(V)) == True:
-					print("ProjectName = %s NDIM = %d XMIN = %.8f XMAX = %.8f XDIV = %d YMIN = %.8f YMAX = %.8f YDIV = %d ZMIN = %.8f ZMAX = %.8f ZDIV = %d Analytic = %s UserFunction = %s Overwrite = %s MAXPOT = DNE MINPOT = DNE XSECONDDERIVATIVE = DNE YSECONDDERIVATIVE = DNE ZSECONDDERIVATIVE = DNE" % (ProjectName,NDIM,XMIN,XMAX,XDIV,YMIN,YMAX,YDIV,ZMIN,ZMAX,ZDIV,Analytic,UserFunction,Overwrite), file=f)
-				f.close()
+				g.save(ProjectName, f)
+				
 			except IOError:
 				print("Error: The potential did not save. The file you wanted to save to was already opened. Close the file and rerun the program.")
 				sys.exit()
