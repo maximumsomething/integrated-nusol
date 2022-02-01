@@ -69,23 +69,17 @@ def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=3678.21, HB
 #-------5.6-------# 
 	else:
 		V = np.load(PotentialArrayPath)
-		
+
 
 	startTimer("Create numerov matrices")
 
-	if g.NDIM == 2 or g.NDIM == 3: hx = (g.XMAX - g.XMIN) / (g.XDIV - 1)
-	if g.NDIM == 2 or g.NDIM == 3: hy = (g.YMAX - g.YMIN) / (g.YDIV - 1)
-	if g.NDIM == 1 or g.NDIM == 3: hz = (g.ZMAX - g.ZMIN) / (g.ZDIV - 1)
+	hx, hy, hz = g.hxyz()
 
 	if g.NDIM == 1:
 		A, M = createNumerovMatrices1D(V, g.ZDIV, hz, MASS, HBAR)
 	elif g.NDIM == 2:
-		if hx != hy:
-			print("WARNING: hx and hy must be equal for NuSol to work, but instead, hx=",hx," and hy=",hy, sep="")
 		A, M = createNumerovMatrices2D(V, g.XDIV, g.YDIV, hx, MASS, HBAR)
 	elif g.NDIM == 3:
-		if hx != hy or hx != hz:
-			print("WARNING: hx, hy, and hz must be equal for NuSol to work, but instead, hx=",hx,", hy=",hy," and hz=",hz, sep="")
 		A, M = createNumerovMatrices3D(V, g.XDIV, g.YDIV, g.ZDIV, hx, MASS, HBAR)
 	
 	if USE_FEAST:
