@@ -192,6 +192,7 @@ def inexactEqual(a, b):
 
 
 #-------4-------#
+# Returns values in kelvins
 def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 	g = gridInfo # for shortness
 		#-------4.1-------#
@@ -409,6 +410,7 @@ def potentialAnalysis(g, V):
 				delsquared = float("nan")
 
 
+# Calculates in hartree then returns kelvins
 def pointPotential(xval, yval, zval):
 	LJ = 0
 	for atom in atoms:
@@ -418,7 +420,10 @@ def pointPotential(xval, yval, zval):
 		LJpointval = 4*jointepsilon*((jointsigma/magnitude)**12-(jointsigma/magnitude)**6)
 		LJ += LJpointval
 
+	# Convert from Eh to K
+	LJ *= 315775.3268
 	return LJ
+
 
 
 def PotentialLimiter(ProjectName, NDIM, PotentialLimit):

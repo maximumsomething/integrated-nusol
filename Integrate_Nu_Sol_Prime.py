@@ -16,9 +16,15 @@ from inus_common_util import *
 
 USE_FEAST=False
 
-#-------5-------#             
-#OVERWRITING#
-def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=3678.21, HBAR = 315775.326864, IgnoreM = True, Generate = True):
+#-------5-------#       
+
+
+
+# HBAR in terms of ((J^2*s^2)(K/J)(m_u/Kg)(A/m)^2)^ 1/2
+# = (hbar)^2 / Kb / m_u * 10^20x`
+# where hbar is planck's constant in joule-seconds, Kb is Boltzmann's constant, m_u is atomic mass in kilograms, and 10^20 is square angstroms per square meter.
+
+def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=2, HBAR = 6.96482118, IgnoreM = True, Generate = True):
 	g = gridInfo # for shortness
 #-------5.1-------# 
 	if type(Generate) != bool: 
@@ -123,7 +129,7 @@ def createNumerovMatrices1D(V, ZDIV, hz, MASS, HBAR):
 
 #-------5.8-------#
 def createNumerovMatrices2D(V, XDIV, YDIV, hx, MASS, HBAR):
-	preFactor2D =   1.0 / (MASS * hx * hx / (HBAR * HBAR))
+	preFactor2D =  (HBAR * HBAR) / (MASS * hx * hx)
 	Nx = XDIV
 	Ny = YDIV
 	NumerovMatrix2D = []
