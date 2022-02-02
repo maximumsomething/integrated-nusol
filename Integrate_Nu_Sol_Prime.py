@@ -24,7 +24,7 @@ USE_FEAST=False
 # = (hbar)^2 / Kb / m_u * 10^20x`
 # where hbar is planck's constant in joule-seconds, Kb is Boltzmann's constant, m_u is atomic mass in kilograms, and 10^20 is square angstroms per square meter.
 
-def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=2, HBAR = 6.96482118, IgnoreM = True, Generate = True):
+def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=2.0, HBAR = 6.96482118, IgnoreM = True, Generate = True):
 	g = gridInfo # for shortness
 #-------5.1-------# 
 	if type(Generate) != bool: 
