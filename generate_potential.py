@@ -48,7 +48,7 @@ alpha = 1
 
 class GridInfo:
 
-	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, Analytic = False, UserFunction = ""):
+	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, Analytic = False, UserFunction = "", Limited = False, PotentialLimit = 0.0):
 
 		# We need to check here because the load function might give None instead of letting it default
 		if XDIV == None: XDIV = 1
@@ -88,6 +88,8 @@ class GridInfo:
 		self.ZDIV = ZDIV
 		self.Analytic = Analytic
 		self.UserFunction = UserFunction
+		self.Limited = Limited
+		self.PotentialLimit = PotentialLimit
 
 		if NDIM == 1:
 			self.XMIN = XLEVEL
@@ -99,7 +101,7 @@ class GridInfo:
 			self.ZMAX = ZLEVEL
 
 	def saveToFile(self, ProjectName, file):
-		print("ProjectName=%s\nNDIM=%d\nXMIN=%.8f\nXMAX=%.8f\nXDIV=%d\nXLEVEL=%.8f\nYMIN=%.8f\nYMAX=%.8f\nYDIV=%d\nYLEVEL=%.8f\nZMIN=%.8f\nZMAX=%.8f\nZDIV=%d\nZLEVEL=%.8f\nAnalytic=%s\nUserFunction=%s\n" % (ProjectName, self.NDIM, self.XMIN, self.XMAX, self.XDIV, self.XLEVEL, self.YMIN, self.YMAX, self.YDIV, self.YLEVEL, self.ZMIN, self.ZMAX, self.ZDIV, self.ZLEVEL, self.Analytic, self.UserFunction), file=file)
+		print("ProjectName=%s\nNDIM=%d\nXMIN=%.8f\nXMAX=%.8f\nXDIV=%d\nXLEVEL=%.8f\nYMIN=%.8f\nYMAX=%.8f\nYDIV=%d\nYLEVEL=%.8f\nZMIN=%.8f\nZMAX=%.8f\nZDIV=%d\nZLEVEL=%.8f\nAnalytic=%s\nUserFunction=%s\n Limited=%s\n PotentialLimit=%d\n" % (ProjectName, self.NDIM, self.XMIN, self.XMAX, self.XDIV, self.XLEVEL, self.YMIN, self.YMAX, self.YDIV, self.YLEVEL, self.ZMIN, self.ZMAX, self.ZDIV, self.ZLEVEL, self.Analytic, self.UserFunction, self.Limited, self.PotentialLimit), file=file)
 
 	def getFilename(ProjectName, NDIM):
 		return "generateinfo%s%sD.dat" %(ProjectName, NDIM)
@@ -377,6 +379,7 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 		return V
 
 
+
 def pointPotential(xval, yval, zval):
 	LJ = 0
 	for atom in atoms:
@@ -387,3 +390,15 @@ def pointPotential(xval, yval, zval):
 		LJ += LJpointval
 
 	return LJ
+
+
+def PotentialLimiter(ProjectName, NDIM, PotentialLimit):
+	V = np.load("Potential%s%dD.npy" %(ProjectName, NDIM))
+	V[V > PotentialLimit] = PotentialLimit
+	np.save("Potential%s%dDLimited%s.npy" %(str(PotentialLimit), NDIM, PotentialLimit), V)
+	g = GridInfo.load(ProjectName, NDIM)
+	g.Limited = True
+	g.PotentialLimit = PotentialLimit
+	NProjectName = "Limited%s%s" %(PotentialLimit, ProjectName)
+	g.save(NProjectName)
+	
