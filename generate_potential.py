@@ -70,8 +70,6 @@ class GridInfo:
 		elif type(UserFunction) != str and Analytic == True:
 			raise ValueError("Function is not in a string format. Make sure the function is in quotation marks and contains only approproiate characters.")
 
-		self.loadedFromFile = None
-
 		self.NDIM = NDIM
 
 		self.XMIN = XMIN
@@ -100,6 +98,9 @@ class GridInfo:
 			self.ZMIN = ZLEVEL
 			self.ZMAX = ZLEVEL
 
+		self.loadedFromFile = None
+		self.warned = False
+
 	def saveToFile(self, ProjectName, file):
 		print("ProjectName=%s\nNDIM=%d\nXMIN=%.8f\nXMAX=%.8f\nXDIV=%d\nXLEVEL=%.8f\nYMIN=%.8f\nYMAX=%.8f\nYDIV=%d\nYLEVEL=%.8f\nZMIN=%.8f\nZMAX=%.8f\nZDIV=%d\nZLEVEL=%.8f\nAnalytic=%s\nUserFunction=%s\n Limited=%s\n PotentialLimit=%d\n" % (ProjectName, self.NDIM, self.XMIN, self.XMAX, self.XDIV, self.XLEVEL, self.YMIN, self.YMAX, self.YDIV, self.YLEVEL, self.ZMIN, self.ZMAX, self.ZDIV, self.ZLEVEL, self.Analytic, self.UserFunction, self.Limited, self.PotentialLimit), file=file)
 
@@ -118,6 +119,28 @@ class GridInfo:
 
 	def load(ProjectName, NDIM):
 		return GridInfo.loadFromFile(GridInfo.getFilename(ProjectName, NDIM))
+
+	def hxyz(self):
+		if self.NDIM == 3 or self.NDIM == 2:
+			hx = (self.XMAX - self.XMIN) / (self.XDIV - 1)
+			hy = (self.YMAX - self.YMIN) / (self.YDIV - 1)
+		else: 
+			hx = 0.0
+			hy = 0.0
+
+		if self.NDIM == 3 or self.NDIM == 1:
+			hz = (self.ZMAX - self.ZMIN) / (self.ZDIV - 1)
+		else:
+			hz = 0.0
+
+		if not self.warned:
+			self.warned = True
+			if self.NDIM == 2 and not inexactEqual(hx, hy):
+				print("WARNING: hx and hy must be equal for NuSol to work, but instead, hx=",hx," and hy=",hy, sep="")
+			elif self.NDIM == 3 and not (inexactEqual(hx, hy) and inexactEqual(hy, hz)):
+				print("WARNING: hx, hy, and hz must be equal for NuSol to work, but instead, hx=",hx,", hy=",hy," and hz=",hz, sep="")
+
+		return hx, hy, hz
 	
 	"""
 	File format:
@@ -148,7 +171,7 @@ class GridInfo:
 			print("Error: Could not read potential file", path)
 			sys.exit()
 
-
+# Helper function for load()
 def tryParseStringToType(string):
 	try:
 		return int(string)
@@ -160,6 +183,12 @@ def tryParseStringToType(string):
 			elif string == "False": return False
 			else: return string
 
+# Floating point can't exactly represent all numbers, so this function is needed to check "equality"
+# of floating point numbers from different sources
+def inexactEqual(a, b):
+	largest = np.maximum(np.abs(a), np.abs(b))
+	return np.abs(a - b) < 0.000000000000001 * largest
+
 
 
 #-------4-------#
@@ -170,10 +199,11 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 		print("Overwrite is not in a boolean format. Make sure it is either true or false.")
 		sys.exit()
 	#-------4.2-------#
-	else:
-		print("Generating Potential...")
-		startTimer("generate")
-		LJPOL = np.array([])
+
+	print("Generating Potential...")
+	startTimer("generate")
+
+	if PrintAnalysis:
 		PotentialArrayPath = "Potential%s%sD.npy" %(ProjectName, g.NDIM)
 		GenerateInfofile = "generateinfo%s%sD.dat" %(ProjectName, g.NDIM)
 
@@ -182,202 +212,201 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 
 		if not checkSuccess:
 			sys.exit()
+
+
+	if g.Analytic == False:
+		V = generateLJ(g)
+			       
+	elif g.Analytic == True:
+		V = generateFromUserFn(g)
 				
-	#-------4.3-------#
+#-------4.5-------# 
+	print("########################### \n Done generating potential! \n###########################)")
+	#print(V)
+	
+	if PrintAnalysis == True:
+		potentialAnalysis(g, V)
 
-		if g.NDIM == 3 or g.NDIM == 2:
-			hx = (g.XMAX - g.XMIN) / (g.XDIV - 1)
-			hy = (g.YMAX - g.YMIN) / (g.YDIV - 1)
-		else: 
-			hx = 0.0
-			hy = 0.0
+	#-------4.7-------#
+		
+		print("########################### \nSaving the potential array as", PotentialArrayPath, "\n###########################")
+		np.save(PotentialArrayPath, V)
+		
+		g.save(ProjectName)
+	
+	return V
 
-		if g.NDIM == 3 or g.NDIM == 1:
-			hz = (g.ZMAX - g.ZMIN) / (g.ZDIV - 1)
-		else:
-			hz = 0.0
+#-------4.3-------#
+def generateLJ(g):
+	hx, hy, hz = g.hxyz()
 
-		if g.NDIM == 2 and hx != hy:
-			print("WARNING: hx and hy must be equal for NuSol to work, but instead, hx=",hx," and hy=",hy, sep="")
-		elif g.NDIM == 3 and (hx != hy or hx != hz):
-			print("WARNING: hx, hy, and hz must be equal for NuSol to work, but instead, hx=",hx,", hy=",hy," and hz=",hz, sep="")
+	if g.NDIM == 1:
+		V = np.zeros(g.ZDIV)
+		for zcoord in range(0, g.ZDIV):
+			zval = g.ZMIN + zcoord * hz
+			pot = pointPotential(g.XLEVEL, g.YLEVEL, zval)
+			V[zcoord] = pot
 
-
-		if g.Analytic == False:
-			if g.NDIM == 1:
-				V = np.zeros(g.ZDIV)
+	elif g.NDIM == 2:
+		V = np.zeros((g.XDIV, g.YDIV))
+		for xcoord in range(0, g.XDIV):
+			for ycoord in range(0, g.YDIV):
+				xval = g.XMIN + xcoord * hx
+				yval = g.YMIN + ycoord * hy
+				pot = pointPotential(xval, yval, g.ZLEVEL)
+				V[xcoord, ycoord] = pot
+	
+	elif g.NDIM == 3:
+		V = np.zeros((g.XDIV, g.YDIV, g.ZDIV))
+		for xcoord in range(0, g.XDIV):
+			for ycoord in range(0, g.YDIV):
 				for zcoord in range(0, g.ZDIV):
+					xval = g.XMIN + xcoord * hx
+					yval = g.YMIN + ycoord * hy
 					zval = g.ZMIN + zcoord * hz
-					pot = pointPotential(g.XLEVEL, g.YLEVEL, zval)
-					V[zcoord] = pot
+					pot = pointPotential(xval, yval, zval)
+					V[xcoord, ycoord, zcoord] = pot	
+	return V
 
-			elif g.NDIM == 2:
-				V = np.zeros((g.XDIV, g.YDIV))
-				for xcoord in range(0, g.XDIV):
-					for ycoord in range(0, g.YDIV):
-						xval = g.XMIN + xcoord * hx
-						yval = g.YMIN + ycoord * hy
-						pot = pointPotential(xval, yval, g.ZLEVEL)
-						V[xcoord, ycoord] = pot
-			
-			elif g.NDIM == 3:
-				V = np.zeros((g.XDIV, g.YDIV, g.ZDIV))
-				for xcoord in range(0, g.XDIV):
-					for ycoord in range(0, g.YDIV):
-						for zcoord in range(0, g.ZDIV):
-							xval = g.XMIN + xcoord * hx
-							yval = g.YMIN + ycoord * hy
-							zval = g.ZMIN + zcoord * hz
-							pot = pointPotential(xval, yval, zval)
-							V[xcoord, ycoord, zcoord] = pot
-				
-	#-------4.4-------#  
-	  ###check if axis right###          
-		elif g.Analytic == True:
-			if g.NDIM == 1:
-				try:
-					Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
-					z = Zgrid
-					V = np.array(eval(g.UserFunction))
-					hz = Zgrid[1] - Zgrid[0]
-				except NameError:
-					print("Invalid function. Make sure your function is a function of z and that all non-elementary operations are preceded by 'np.'")
-					sys.exit()
-			if g.NDIM == 2:
-				try:
-					Xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
-					hx = Xgrid[1] - Xgrid[0]
-					Ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
-					hy = Ygrid[1] - Ygrid[0]
-					x,y = np.meshgrid(Xgrid,Ygrid)
-					print(g.UserFunction)
-					V = np.array(eval(g.UserFunction))
-				except NameError:
-					print("Invalid function. Make sure your function is a function of x and y and that all non-elementary operations are proceded by 'np.'")
-					sys.exit()
-			if g.NDIM == 3:
-				try:
-					Xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
-					hx = Xgrid[1] - Xgrid[0]
-					Ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
-					hy = Ygrid[1] - Ygrid[0]
-					Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
-					hz = Zgrid[1]-Zgrid[0]
-					x,y,z = np.meshgrid(Xgrid, Ygrid, Zgrid)
-					V = np.array(eval(g.UserFunction))
-				except NameError:
-					print("Invalid function. Make sure your function is a function of x and y and that all non-elementary operations are proceded by 'np.'")
-					sys.exit()
-					
-	#-------4.5-------# 
+#-------4.4-------#  
+###check if axis right###   
+def generateFromUserFn(g):
+	if g.NDIM == 1:
+		try:
+			Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
+			z = Zgrid
+			V = np.array(eval(g.UserFunction))
+			hz = Zgrid[1] - Zgrid[0]
+		except NameError:
+			print("Invalid function. Make sure your function is a function of z and that all non-elementary operations are preceded by 'np.'")
+			sys.exit()
+	if g.NDIM == 2:
+		try:
+			Xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
+			hx = Xgrid[1] - Xgrid[0]
+			Ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
+			hy = Ygrid[1] - Ygrid[0]
+			x,y = np.meshgrid(Xgrid,Ygrid)
+			print(UserFunction)
+			V = np.array(eval(g.UserFunction))
+		except NameError:
+			print("Invalid function. Make sure your function is a function of x and y and that all non-elementary operations are proceded by 'np.'")
+			sys.exit()
+	if g.NDIM == 3:
+		try:
+			Xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
+			hx = Xgrid[1] - Xgrid[0]
+			Ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
+			hy = Ygrid[1] - Ygrid[0]
+			Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
+			hz = Zgrid[1]-Zgrid[0]
+			x,y,z = np.meshgrid(Xgrid, Ygrid, Zgrid)
+			V = np.array(eval(g.UserFunction))
+		except NameError:
+			print("Invalid function. Make sure your function is a function of x and y and that all non-elementary operations are proceded by 'np.'")
+			sys.exit()
 
-		print("########################### \n Done generating potential! \n###########################)")
-		#print(V)
+	return V
+
+
+def potentialAnalysis(g, V):
+	hx, hy, hz = g.hxyz()
+
+	if not np.isnan(np.sum(V)) and not np.isinf(np.sum(V)):
+		# Should we also be doing analysis if there are nans?
+
+		print("Maximum potential:", np.amax(V), "\nMinimum potential:", np.amin(V), "\nMinimum potential's array position", np.unravel_index(np.argmin(V, axis=None), V.shape))
+	
+		#result = (np.where(V == np.amin(V)))
+		result = np.unravel_index(np.argmin(V), np.shape(V))
 		
-		if PrintAnalysis == True:
-			if np.isnan(np.sum(V)) == False and np.isinf(np.sum(V)) == False:
-				print("Maximum potential:", np.amax(V), "\nMinimum potential:", np.amin(V), "\nMinimum potential's array position", np.unravel_index(np.argmin(V, axis=None), V.shape))
-			
-				#result = (np.where(V == np.amin(V)))
-				result = np.unravel_index(np.argmin(V), np.shape(V))
-				
-		#-------4.6-------#
-				
-				if g.NDIM == 1:
-					#listofcoordinates = list(zip(g.ZMAX-result[0]*hz))
-					#for coord in listofcoordinates:
-					#    min_list.append(coord)
-
-					#print("The z position of the minimum is", (min_list))
-					minimumpot = np.amin(V)
-				
-				
-					zresult = result[0]
-					try:
-						zsecondderivative = ((V[zresult+1] - 2*minimumpot + V[zresult-1])/(hz**2))
-						print("The second partial derivative with respect to z is", zsecondderivative)
-					except:
-						print("Undefined second partial derivative with respect to z.")
-						zsecondderivative = float("Nan")
-					ysecondderivative = float("Nan")
-					xsecondderivative = float("Nan")
-				if g.NDIM == 2:
-					#listofcoordinates = list(zip(g.XMAX-result[0]*hx, g.YMAX-result[1]*hy))
-				
-					#for coord in listofcoordinates:
-					#    min_list.append(coord)
-
-					#print("The x,y position of the minimum is", (min_list))
-
-
-					minimumpot = np.amin(V)
-
-					xresult = result[0]
-					yresult = result[1]
-
-					try:
-						xsecondderivative = ((V[xresult+1, yresult] - 2*minimumpot + V[xresult-1, yresult])/(hx**2))
-						print("The second partial derivative with respect to x is", xsecondderivative)
-					except:
-						print("Undefined second partial derivative with respect to x.")
-						xsecondderivative = float("Nan")
-					try:
-						ysecondderivative = ((V[xresult, yresult+1] - 2*minimumpot + V[xresult, yresult-1])/(hy**2))
-						print("The second partial derivative with respect to y is", ysecondderivative)
-					except:
-						print("Undefined second partial derivative with respect to y.")
-						ysecondderivative = float("Nan")
-					try: 
-						print("Del Squared is", xsecondderivative+ysecondderivative)
-						delsquared = xsecondderivative+ysecondderivative
-					except:
-						print("Del Squared is undefined.")
-						delsquared = float("Nan")
-					zsecondderivative = float("Nan")
-				if g.NDIM == 3:
-					#listofcoordinates = list(zip(g.XMAX-result[0]*hx, g.YMAX-result[1]*hy, g.ZMAX-result[2]*hz))
-					#for coord in listofcoordinates:
-					#    min_list.append(coord)
-					#print("The x,y,z position of the minimum is", (min_list))
-					minimumpot = np.amin(V)
-					xresult = result[0]
-					yresult = result[1]
-					zresult = result[2]
-					print(xresult, yresult, zresult)
-					try:
-						xsecondderivative = ((V[xresult+1, yresult, zresult] - 2*minimumpot + V[xresult-1, yresult, zresult])/(hx**2))
-						print("The second partial derivative with respect to x is", xsecondderivative)
-					except:
-						print("Undefined second partial derivative with respect to x.")
-						xsecondderivative = float("nan")
-					try:
-						ysecondderivative = ((V[xresult, yresult+1, zresult] - 2*minimumpot + V[xresult, yresult-1, zresult])/(hy**2))
-						print("The second partial derivative with respect to y is", ysecondderivative)
-					except:
-						print("Undefined second partial derivative with respect to y.")
-						ysecondderivative = float("nan")
-					try:
-						zsecondderivative = ((V[xresult, yresult, zresult+1] - 2*minimumpot + V[xresult, yresult, zresult-1])/(hz**2))
-						print("The second partial derivative with respect to z is", zsecondderivative)
-					except:
-						print("Undefined second partial derivative with respect to z.")
-						zsecondderivative = float("nan")
-					try: 
-						print("Del Squared is", xsecondderivative+ysecondderivative+zsecondderivative)
-						delsquared = xsecondderivative+ysecondderivative+zsecondderivative
-					except:
-						print("Del Squared is undefined.")
-						delsquared = float("nan")
-
-		#-------4.7-------#
-			
-			print("########################### \nSaving the potential array as", PotentialArrayPath, "\n###########################")
-			np.save(PotentialArrayPath, V)
-			
-			g.save(ProjectName)
+#-------4.6-------#
 		
-		return V
+		if g.NDIM == 1:
+			#listofcoordinates = list(zip(g.ZMAX-result[0]*hz))
+			#for coord in listofcoordinates:
+			#    min_list.append(coord)
 
+			#print("The z position of the minimum is", (min_list))
+			minimumpot = np.amin(V)
+		
+		
+			zresult = result[0]
+			try:
+				zsecondderivative = ((V[zresult+1] - 2*minimumpot + V[zresult-1])/(hz**2))
+				print("The second partial derivative with respect to z is", zsecondderivative)
+			except:
+				print("Undefined second partial derivative with respect to z.")
+				zsecondderivative = float("Nan")
+			ysecondderivative = float("Nan")
+			xsecondderivative = float("Nan")
+		if g.NDIM == 2:
+			#listofcoordinates = list(zip(g.XMAX-result[0]*hx, g.YMAX-result[1]*hy))
+		
+			#for coord in listofcoordinates:
+			#    min_list.append(coord)
+
+			#print("The x,y position of the minimum is", (min_list))
+
+
+			minimumpot = np.amin(V)
+
+			xresult = result[0]
+			yresult = result[1]
+
+			try:
+				xsecondderivative = ((V[xresult+1, yresult] - 2*minimumpot + V[xresult-1, yresult])/(hx**2))
+				print("The second partial derivative with respect to x is", xsecondderivative)
+			except:
+				print("Undefined second partial derivative with respect to x.")
+				xsecondderivative = float("Nan")
+			try:
+				ysecondderivative = ((V[xresult, yresult+1] - 2*minimumpot + V[xresult, yresult-1])/(hy**2))
+				print("The second partial derivative with respect to y is", ysecondderivative)
+			except:
+				print("Undefined second partial derivative with respect to y.")
+				ysecondderivative = float("Nan")
+			try: 
+				print("Del Squared is", xsecondderivative+ysecondderivative)
+				delsquared = xsecondderivative+ysecondderivative
+			except:
+				print("Del Squared is undefined.")
+				delsquared = float("Nan")
+			zsecondderivative = float("Nan")
+		if g.NDIM == 3:
+			#listofcoordinates = list(zip(g.XMAX-result[0]*hx, g.YMAX-result[1]*hy, g.ZMAX-result[2]*hz))
+			#for coord in listofcoordinates:
+			#    min_list.append(coord)
+			#print("The x,y,z position of the minimum is", (min_list))
+			minimumpot = np.amin(V)
+			xresult = result[0]
+			yresult = result[1]
+			zresult = result[2]
+			print(xresult, yresult, zresult)
+			try:
+				xsecondderivative = ((V[xresult+1, yresult, zresult] - 2*minimumpot + V[xresult-1, yresult, zresult])/(hx**2))
+				print("The second partial derivative with respect to x is", xsecondderivative)
+			except:
+				print("Undefined second partial derivative with respect to x.")
+				xsecondderivative = float("nan")
+			try:
+				ysecondderivative = ((V[xresult, yresult+1, zresult] - 2*minimumpot + V[xresult, yresult-1, zresult])/(hy**2))
+				print("The second partial derivative with respect to y is", ysecondderivative)
+			except:
+				print("Undefined second partial derivative with respect to y.")
+				ysecondderivative = float("nan")
+			try:
+				zsecondderivative = ((V[xresult, yresult, zresult+1] - 2*minimumpot + V[xresult, yresult, zresult-1])/(hz**2))
+				print("The second partial derivative with respect to z is", zsecondderivative)
+			except:
+				print("Undefined second partial derivative with respect to z.")
+				zsecondderivative = float("nan")
+			try: 
+				print("Del Squared is", xsecondderivative+ysecondderivative+zsecondderivative)
+				delsquared = xsecondderivative+ysecondderivative+zsecondderivative
+			except:
+				print("Del Squared is undefined.")
+				delsquared = float("nan")
 
 
 def pointPotential(xval, yval, zval):
