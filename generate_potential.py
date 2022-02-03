@@ -272,40 +272,32 @@ def generateLJ(g):
 #-------4.4-------#  
 ###check if axis right###   
 def generateFromUserFn(g):
+	hx, hy, hz = g.hxyz()
+
+
 	if g.NDIM == 1:
-		try:
-			Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
-			z = Zgrid
-			V = np.array(eval(g.UserFunction))
-			hz = Zgrid[1] - Zgrid[0]
-		except NameError:
-			print("Invalid function. Make sure your function is a function of z and that all non-elementary operations are preceded by 'np.'")
-			sys.exit()
+		Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)	
+		z = zgrid
+		x = g.XLEVEL
+		y = g.YLEVEL
+
 	if g.NDIM == 2:
-		try:
-			Xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
-			hx = Xgrid[1] - Xgrid[0]
-			Ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
-			hy = Ygrid[1] - Ygrid[0]
-			x,y = np.meshgrid(Xgrid,Ygrid)
-			print(UserFunction)
-			V = np.array(eval(g.UserFunction))
-		except NameError:
-			print("Invalid function. Make sure your function is a function of x and y and that all non-elementary operations are proceded by 'np.'")
-			sys.exit()
+		Xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
+		Ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
+		x, y = np.meshgrid(Xgrid, Ygrid)
+		z = g.ZLEVEL
+	
 	if g.NDIM == 3:
-		try:
-			Xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
-			hx = Xgrid[1] - Xgrid[0]
-			Ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
-			hy = Ygrid[1] - Ygrid[0]
-			Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
-			hz = Zgrid[1]-Zgrid[0]
-			x,y,z = np.meshgrid(Xgrid, Ygrid, Zgrid)
-			V = np.array(eval(g.UserFunction))
-		except NameError:
-			print("Invalid function. Make sure your function is a function of x and y and that all non-elementary operations are proceded by 'np.'")
-			sys.exit()
+		Xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
+		Ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
+		Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
+		x,y,z = np.meshgrid(Xgrid, Ygrid, Zgrid)
+
+	try:
+		V = np.array(eval(g.UserFunction))
+	except NameError:
+		raise ValueError("Invalid function. Make sure your function is a function of x, y, and z and that all non-elementary operations are proceded by 'np.'")
+		sys.exit()
 
 	return V
 
