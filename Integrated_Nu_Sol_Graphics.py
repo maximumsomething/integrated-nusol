@@ -5,21 +5,10 @@ import os
 import os.path
 from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
+import matplotlib.widgets as widgets
 np.set_printoptions(threshold=sys.maxsize)
 
 import generate_potential as gp
-
-def GraphicalGenerate(ProjectName, ZLEVEL):
-	g = gp.GridInfo.load(ProjectName, 3)
-	g.NDIM = 2
-	g.ZLEVEL = ZLEVEL
-
-	global meshx, meshy, V
-	V = gp.generate(ProjectName, g, Overwrite = True, PrintAnalysis = False)
-	xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
-	ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
-	
-	meshx, meshy = np.meshgrid(xgrid, ygrid, sparse=False, indexing="xy")
 
 def ZGraphicalGenerate(ProjectName, XLEVEL, YLEVEL):
 	g = gp.GridInfo.load(ProjectName, 3)
@@ -44,12 +33,46 @@ def Contour(ProjectName, ZLEVEL, MINLEV=-.15, MAXLEV=.08, DIV=25):
 	elif DIV <=0:
 		print("DIV cannot be less than or equal to zero.")
 	else: 
-		GraphicalGenerate(ProjectName, ZLEVEL)
+		g = gp.GridInfo.load(ProjectName, 3)
+		g.NDIM = 2
+		g.ZLEVEL = ZLEVEL
+
+		xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
+		ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
 		
-		CS1 = plt.contour(meshx, meshy, V)
-		plt.clabel(CS1, fontsize = 6)
+		meshx, meshy = np.meshgrid(xgrid, ygrid, sparse=False, indexing="xy")
+
+		fig, contour_axis = plt.subplots()
+
+		zSlider = widgets.Slider(
+			ax=plt.axes([0.25, 0.0, 0.65, 0.03]), 
+			label='Z-level',
+			valmin=g.ZMIN,
+			valmax=g.ZMAX,
+			valinit=ZLEVEL
+		)
+
+		def update(val):
+			print("Generating for", val)
+			g.ZLEVEL = val
+			newGrid = gp.generate(ProjectName, g, Overwrite = True, PrintAnalysis = False)
+
+			contour_axis.clear()
+
+			CS1 = contour_axis.contour(meshx, meshy, newGrid)
+			contour_axis.clabel(CS1, fontsize = 6)
+
+			plt.draw()
+
+		# Draw first plot
+		update(ZLEVEL)
+
+		zSlider.on_changed(update)
+
 		plt.show()
-		sys.exit()
+
+
+
 
 def Heat(ProjectName, ZLEVEL):
 	if type(ZLEVEL) != float:
