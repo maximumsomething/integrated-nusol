@@ -99,6 +99,8 @@ def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=2.0, HBAR =
 		endTimer()
 		writeEigs(eval, evec, EIGENVALUES_OUT, EIGENVECTORS_OUT, Eigenvectoranalysis)
 
+		return eval
+
 #-------5.7-------# 
 def createNumerovMatrices1D(V, ZDIV, hz, MASS, HBAR):
 	preFactor1D = -6.0* HBAR * HBAR / (MASS * hz * hz)
