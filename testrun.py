@@ -19,14 +19,31 @@ from generate_potential import *
 #numerov("matrixtesting1D", 1, GridInfo(XLEVEL=0.0, YLEVEL=0.0, ZMIN=3.32, ZMAX=5.32, ZDIV=30), N_EVAL = 3, Overwrite=True)
 
 #generate("2GraphicsTesting", GridInfo(3, -1.0, 1.0, 20, 0.0, -1.0, 1.0, 20, 0.0, 3.32, 5.32, 20, 0.0, False, False), Overwrite = True)
-#Contour("2GraphicsTesting", 4.32)
-# PotentialZGraphics("2GraphicsTesting", 1.0, 1.0)
 
-#Contour("firstOrderNew", 0.0)
 
-#numerov("LJBig", GridInfo(3, -2.0, 2.0, 40, 0.0, -2.0, 2.0, 40, 0.0, 2.32, 6.32, 40, 0.0), N_EVAL = 7, IgnoreM = True)
 
-#Contour("LJBig", 4.32)
+
+#numerov("LJBig", GridInfo(3, -3.0, 3.0, 30, 0.0, -3.0, 3.0, 30, 0.0, 3.32, 9.32, 30, 0.0), N_EVAL = 7, IgnoreM = True, Overwrite=True)
+
+#GridInfo(3, -8.0, 8.0, 30, 0.0, -8.0, 8.0, 30, 0.0, -8.0, 8.0, 30, 0.0).save("mof5biggg")
+#Graph2D("surface", "mof5biggg", 3.32)
+
+#numerov("LJZero", GridInfo(3, -2.0, 2.0, 25, 0.0, -2.0, 2.0, 25, 0.0, 1.0, 5.0, 25, 0.0), N_EVAL = 7, IgnoreM = True, Overwrite=True)
+
+#PotentialGraph2D("heat", "LJZero", 3.32)
+
+numerov("windowTest", GridInfo(3, -1.0, 1.0, 25, 0.0, -1.0, 1.0, 25, 0.0, 2.5, 4.5, 25, 0.0), MASS=2.0, N_EVAL = 7, IgnoreM = True, Overwrite=True)
+
+numerov("windowTestD2", GridInfo(3, -1.0, 1.0, 25, 0.0, -1.0, 1.0, 25, 0.0, 2.5, 4.5, 25, 0.0), MASS=4.0, N_EVAL = 7, IgnoreM = True, Overwrite=True)
+
+numerov("windowTestHalf", GridInfo(3, -0.5, 0.5, 25, 0.0, -0.5, 0.5, 25, 0.0, 3.0, 4.0, 25, 0.0), MASS=4.0, N_EVAL = 7, IgnoreM = True, Overwrite=True)
+
+PsiGraph2D("surface", "windowTest", 3.32, 0)
+PsiGraph2D("surface", "windowTest", 3.32, 1)
+PsiGraph2D("surface", "windowTestD2", 3.32, 0)
+PsiGraph2D("surface", "windowTestD2", 3.32, 1)
+
+plt.show()
 
 #Accuracy testing
 def accuracyTesting():
