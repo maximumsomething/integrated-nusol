@@ -51,13 +51,13 @@ def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=2.0, HBAR =
 	PotentialArrayPath = "Potential%s%sD.npy" %(ProjectName, g.NDIM)
 	GenerateInfofile = "generateinfo%s%sD.dat" %(ProjectName, g.NDIM)
 	EIGENVALUES_OUT = "valout%s%sD.dat" %(ProjectName, g.NDIM)
-	EIGENVECTORS_OUT = "vecout%s%sD.dat" %(ProjectName, g.NDIM)
-	Eigenvectoranalysis = "vecanalysis%s%sD.npy" %(ProjectName, g.NDIM)
+	EIGENVECTORS_OUT = "vecoutFlat%s%sD.dat" %(ProjectName, g.NDIM)
+	EigenvectorArray = "vecarray%s%sD.npy" %(ProjectName, g.NDIM)
 
 
 	checkSuccess = checkFileWriteable(EIGENVALUES_OUT, "eigenvalue out", Overwrite)
 	checkSuccess &= checkFileWriteable(EIGENVECTORS_OUT, "eigenvector out", Overwrite)
-	checkSuccess &= checkFileWriteable(Eigenvectoranalysis, "eigenvector analysis", Overwrite)
+	checkSuccess &= checkFileWriteable(EigenvectorArray, "eigenvector analysis", Overwrite)
 	
 	if Generate == False:
 		checkSuccess &= checkFileReadable(PotentialArrayPath, "Potential Array")
@@ -97,7 +97,18 @@ def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=2.0, HBAR =
 		else:
 			eval, evec = solveEigs(A, M, N_EVAL)
 		endTimer()
-		writeEigs(eval, evec, EIGENVALUES_OUT, EIGENVECTORS_OUT, Eigenvectoranalysis)
+
+		# Sort eigs so lowest eigenvalue is first
+		norder = eval.argsort()
+		eval = eval[norder].real
+		evec = evec.T[norder].real
+
+		writeEigs(eval, evec, EIGENVALUES_OUT, EIGENVECTORS_OUT)
+
+		print("Saving Eigenvector array File...")
+		evec_array = convertEvec(evec, g.NDIM, g.XDIV, g.YDIV, g.ZDIV)
+		np.save(EigenvectorArray, evec_array)
+		print("Saved!")
 
 		return eval
 
@@ -430,11 +441,32 @@ def solveEigs(A, M, N_EVAL):
 
 	return sp.linalg.eigs(A=A, k=N_EVAL, M=M, which='SM')
 
-def writeEigs(eval, evec, EIGENVALUES_OUT, EIGENVECTORS_OUT, Eigenvectoranalysis):
+# Convert the eigenvector list into a (NDIM+1)-dimensional array, where the first dimension is per eigenvalue and the rest are the dimensions of V
+def convertEvec(evec, NDIM, XDIV, YDIV, ZDIV):
+	N_EVAL = evec.shape[0]
+	evec = evec.real
+
+	if NDIM == 1:
+		evec_array = evec
+	if NDIM == 2:
+		evec_array = np.zeros((N_EVAL, XDIV, YDIV))
+		for x in range(0, XDIV):
+			for y in range(0, YDIV):
+				evec_array[:, x, y] = evec[x*YDIV + y, :]
+	if NDIM == 3:
+		# NuSol uses a wacky z-x-y ordering when they lay out the 3D numerov matrix
+		evec_array = np.zeros((N_EVAL, XDIV, YDIV, ZDIV))
+		for x in range(0, XDIV):
+			for y in range(0, YDIV):
+				for z in range(0, YDIV):
+					evec_array[:, x, y, z] = evec[:, z*XDIV*YDIV + x*YDIV + y]
+
+	return evec_array
+
+
+# Write the eigs to a flat file, like NuSol did
+def writeEigs(eval, evec, EIGENVALUES_OUT, EIGENVECTORS_OUT):
 	
-	norder = eval.argsort()
-	eval = eval[norder].real
-	evec = evec.T[norder].real
 	f = open(EIGENVALUES_OUT,'w')
 	for e in eval:
 		print("%.12f" % (e), file=f)
@@ -448,10 +480,6 @@ def writeEigs(eval, evec, EIGENVALUES_OUT, EIGENVECTORS_OUT, Eigenvectoranalysis
 		print(line, file=f)
 	f.close()
 	print("Save complete!")
-	print("Saving Eigenvector Analysis File...")
-	# Not sure if this was what was intended to be saved?
-	np.save(Eigenvectoranalysis, evec)
-	print("Eigenvector Analysis File Saved!")
 
 def runFeast(A, M, EIGENVALUES_OUT, EIGENVECTORS_OUT):
 	FEAST_COMMAND="wsl LD_LIBRARY_PATH=/opt/intel/oneapi/compiler/2022.0.2/linux/compiler/lib/intel64_lin/ $(wslpath 'C:\\Users\\Student\\Desktop\\NuSol_original\\lib\\NuSol_FEAST')"

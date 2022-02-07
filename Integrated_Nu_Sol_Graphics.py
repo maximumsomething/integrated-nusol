@@ -23,23 +23,49 @@ def ZGraphicalGenerate(ProjectName, XLEVEL, YLEVEL):
 
 
 # type is "contour", "heat", or "surface"
-def Graph2D(Type, ProjectName, ZLEVEL):
+def PotentialGraph2D(Type, ProjectName, ZLEVEL):
+
+	g = gp.GridInfo.load(ProjectName, 3)
+
+	g.NDIM = 2
+	g.ZLEVEL = ZLEVEL
+
+	name = f"Potential for {ProjectName}"
+
+	def getV(newZ):
+		print("Generating for", newZ)
+		g.ZLEVEL = newZ
+		return gp.generate(ProjectName, g, Overwrite = True, PrintAnalysis = False)
+
+	Graph2D(Type, name, g, ZLEVEL, getV)
+
+
+def PsiGraph2D(Type, ProjectName, ZLEVEL, EVAL_NUM=0):
+	g = gp.GridInfo.load(ProjectName, 3)
+	evec = np.load("vecarray%s%sD.npy" %(ProjectName, g.NDIM))[EVAL_NUM]
+
+	valFile = open("valout%s%sD.dat" %(ProjectName, g.NDIM))
+	lines = valFile.readlines()
+
+	name = f"Psi for {ProjectName}, Eval {EVAL_NUM} which is {lines[EVAL_NUM]}"
+
+	def getSlice(newZ):
+		_, _, hz = g.hxyz()
+		div = round((newZ - g.ZMIN) / hz)
+		return evec[:, :, div]
+
+	Graph2D(Type, name, g, ZLEVEL, getSlice)
+
+
+# g is a GridInfo defining the grid to graph
+# getSlice(ZLEVEL) returns the grid at the given Z-level (Potential or psi)
+def Graph2D(Type, name, g, ZLEVEL, getSlice):
 	if type(ZLEVEL) != float:
 		print("ZLEVEL is not in float format.")
-	# elif type(MINLEV) != float:
-	# 	print("MINLEV is not in float format.")
-	# elif type(MAXLEV) != float:
-	# 	print("MAXLEV is not in float format.")
-	# elif type(DIV) != int:
-	# 	print("DIV is not in an integer format. Make sure there are no decimals.")
-	# elif DIV <=0:
-	# 	print("DIV cannot be less than or equal to zero.")
-	elif Type != 'contour' and Type != 'heat' and Type != 'surface':
+	
+	if Type != 'contour' and Type != 'heat' and Type != 'surface':
 		print('type must be "contour", "heat", or "surface"')
 	else: 
-		g = gp.GridInfo.load(ProjectName, 3)
-		g.NDIM = 2
-		g.ZLEVEL = ZLEVEL
 
 		xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
 		ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
@@ -47,10 +73,10 @@ def Graph2D(Type, ProjectName, ZLEVEL):
 		meshx, meshy = np.meshgrid(xgrid, ygrid, sparse=False, indexing="xy")
 
 		if Type == "surface":
-			fig = plt.figure()
+			fig = plt.figure(num=name)
 			axis = fig.add_subplot(111, projection='3d')
 		else:
-			fig, axis = plt.subplots()
+			fig, axis = plt.subplots(num=name)
 
 		zSlider = widgets.Slider(
 			ax=plt.axes([0.25, 0.0, 0.65, 0.03]), 
@@ -61,20 +87,20 @@ def Graph2D(Type, ProjectName, ZLEVEL):
 		)
 
 		def update(val):
-			print("Generating for", val)
 			g.ZLEVEL = val
-			V = gp.generate(ProjectName, g, Overwrite = True, PrintAnalysis = False)
+			
+			newGrid = getSlice(val)
 
 			axis.clear()
 
 			if Type == 'contour':
-				plotHandle = axis.contour(meshx, meshy, V)
+				plotHandle = axis.contour(meshx, meshy, newGrid)
 				axis.clabel(plotHandle, fontsize = 6)
 			elif Type == 'heat':
-				axis.pcolormesh(meshx, meshy, V)
+				axis.pcolormesh(meshx, meshy, newGrid)
 				axis.set_aspect('equal')
 			elif Type == 'surface':
-				axis.plot_surface(meshx, meshy, V)
+				axis.plot_surface(meshx, meshy, newGrid)
 
 			plt.draw()
 
@@ -83,7 +109,7 @@ def Graph2D(Type, ProjectName, ZLEVEL):
 
 		zSlider.on_changed(update)
 
-		plt.show()
+		#plt.show()
 
 
 		
