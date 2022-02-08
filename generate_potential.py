@@ -49,7 +49,7 @@ alpha = 1
 
 class GridInfo:
 
-	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, Analytic = False, UserFunction = "", Limited = False, PotentialLimit = 0.0):
+	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, Analytic = False, UserFunction = "", Limited = True, PotentialLimit = 10000.0):
 
 		# We need to check here because the load function might give None instead of letting it default
 		if XDIV == None: XDIV = 1
@@ -222,9 +222,10 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 	elif g.Analytic == True:
 		V = generateFromUserFn(g)
 
-	#V = smoothPot(chopPot(V), g.NDIM)
-	#V = smoothChop(V)
-	V = chopPot(V)
+	if g.Limited:
+		#V = smoothPot(chopPot(V, g.PotentialLimit), g.NDIM)
+		#V = smoothChop(V, g.PotentialLimit)
+		V = chopPot(V, g.PotentialLimit)
 				
 #-------4.5-------# 
 	print("########################### \n Done generating potential! \n###########################)")
@@ -307,15 +308,15 @@ def generateFromUserFn(g):
 	return V
 
 
-VMAX = 10000.0
 # Cuts off all potentials greater than VMAX
-def chopPot(V):
+def chopPot(V, VMAX):
 	return np.where(V < VMAX, V, VMAX)
 
 # These smoothing functions don't seem to result in anything different from the hard limiter above
 # VMAX is a "soft cap". VCHOP is the hard cap. This transform probably has a name, but I don't know what it is.
-VCHOP = VMAX * 10.0
-def smoothChop(V):
+
+def smoothChop(V, VMAX):
+	VCHOP = VMAX * 10.0
 	#transformedV = VMAX + (V - VMAX) * (VCHOP*2 - (V - VMAX))/(VCHOP*2)
 	# m = VCHOP * np.exp(1.0)
 	# transformedV = VMAX + (V - VMAX) * (np.exp(-(V - VMAX)/m))
