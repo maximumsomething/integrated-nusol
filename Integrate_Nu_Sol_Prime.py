@@ -9,6 +9,7 @@ import scipy.optimize as op
 import scipy.sparse as sp
 import numpy as np
 np.set_printoptions(threshold=sys.maxsize)
+from scipy.special import cbrt
 
 from generate_potential import generate
 from inus_common_util import *
@@ -219,6 +220,7 @@ def createNumerovMatrices3D(V, XDIV, YDIV, ZDIV, hx, MASS, HBAR):
 	Nx = XDIV
 	Ny = YDIV
 	Nz = ZDIV
+	#V = np.cbrt(V)
 	NumerovMatrix3D = []
 	FORTRANoffset = 1
 	Nele = 0
@@ -422,6 +424,12 @@ def createNumerovMatrices3D(V, XDIV, YDIV, ZDIV, hx, MASS, HBAR):
 #-------5.10-------# 
 
 def solveEigsApprox(A, N_EVAL):
+	#A = A.astype(complex)
+	#print("done complex")
+	#A = A.power(1/3)
+	#print("done power")
+	#A = A.real
+	print("done real")
 	eval, evec =  sp.linalg.eigs(A=A, k=N_EVAL, which='SM')
 	eval /= 12
 	return eval, evec
