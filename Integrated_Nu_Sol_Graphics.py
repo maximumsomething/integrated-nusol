@@ -11,15 +11,38 @@ np.set_printoptions(threshold=sys.maxsize)
 import generate_potential as gp
 
 
-def ZGraphicalGenerate(ProjectName, XLEVEL, YLEVEL):
+
+def GraphicalGenerate1D(ProjectName, XLEVEL, YLEVEL, ZLEVEL, axis = "x"):
 	g = gp.GridInfo.load(ProjectName, 3)
 	g.NDIM = 1
 	g.XLEVEL = XLEVEL
 	g.YLEVEL = YLEVEL
+	g.ZLEVEL = ZLEVEL
+	g.axis = axis
 
-	global V, zgrid
+	global V, axisgrid
 	V = gp.generate(ProjectName, g, Overwrite = True, PrintAnalysis = False)
-	zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
+	#V = V - (np.amin(V))
+	#print(V)
+	if axis == "x":
+		axisgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
+	if axis == "y":
+		axisgrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
+	if axis == "z":
+		axisgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
+
+	
+
+#def ZGraphicalGenerate(ProjectName, XLEVEL, YLEVEL):
+#	g = gp.GridInfo.load(ProjectName, 3)
+#	g.NDIM = 1
+#	g.XLEVEL = XLEVEL
+#	g.YLEVEL = YLEVEL
+
+#	global V, zgrid
+#	V = gp.generate(ProjectName, g, Overwrite = True, PrintAnalysis = False)
+#	V = V - (np.amin(V))
+#	zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
 
 
 # type is "contour", "heat", or "surface"
@@ -118,12 +141,12 @@ def Graph2D(Type, name, g, ZLEVEL, getSlice):
 Graph2D.handles = []
 
 		
-def PotentialZGraphics(ProjectName, XLEVEL, YLEVEL):
+def PotentialGraphics1D(ProjectName, XLEVEL = 0.0, YLEVEL = 0.0, ZLEVEL = 0.0, axis = None):  
 	if type(YLEVEL) != float:
 		print("YLEVEL is not in float format.")
 	elif type(XLEVEL) != float:
 		print("XLEVEL is not in float format.")
 	else:
-		ZGraphicalGenerate(ProjectName, XLEVEL, YLEVEL)
-		plt.plot(zgrid, V)
+		GraphicalGenerate1D(ProjectName, XLEVEL, YLEVEL, ZLEVEL, axis)
+		plt.plot(axisgrid, V)
 		plt.show()

@@ -21,9 +21,18 @@ from generate_potential import *
 #generate("2GraphicsTesting", GridInfo(3, -1.0, 1.0, 20, 0.0, -1.0, 1.0, 20, 0.0, 3.32, 5.32, 20, 0.0, False, False), Overwrite = True)
 
 
+#generate("MOFretry", GridInfo(3, -.5, .5, 30, 0.0, -.5, .5, 30, 0.0, 2.82, 3.82, 30, 0.0, False), Overwrite=True)
 
 
-#numerov("LJBig", GridInfo(3, -3.0, 3.0, 30, 0.0, -3.0, 3.0, 30, 0.0, 3.32, 9.32, 30, 0.0), N_EVAL = 7, IgnoreM = True, Overwrite=True)
+#generate("FitzGeraldgraphSHO", GridInfo(3, -.5, .5, 30, 0.0, -.5, .5, 30, 0.0, 2.82, 3.82, 30, 0.0, True, "437*((x**2+y**2+(z-3.32)**2))"), Overwrite=True)
+#generate("FitzGeraldgraphMOF", GridInfo(3, -.5, .5, 30, 0.0, -.5, .5, 30, 0.0, 2.82, 3.82, 30, 0.0, False), Overwrite=True)
+
+#ZGraphicalGenerate("FitzGeraldgraphSHO", 0.0, 0.0)
+
+#PotentialZGraphics("FitzGeraldgraphMOF", 0.0, 0.0)
+
+#PotentialGraphics1D("FitzGeraldgraphMOF", 0.0, 0.0, 3.32, 'x')
+numerov("LJBignew", GridInfo(3, -.5, .5, 15, 0.0, -.5, .5, 15, 0.0, 2.82, 3.82, 15, 0.0), N_EVAL = 101, IgnoreM = True, Overwrite=True)
 
 #GridInfo(3, -8.0, 8.0, 30, 0.0, -8.0, 8.0, 30, 0.0, -8.0, 8.0, 30, 0.0).save("mof5biggg")
 #Graph2D("surface", "mof5biggg", 3.32)
@@ -32,18 +41,18 @@ from generate_potential import *
 
 #PotentialGraph2D("heat", "LJZero", 3.32)
 
-numerov("windowTest", GridInfo(3, -1.0, 1.0, 25, 0.0, -1.0, 1.0, 25, 0.0, 2.5, 4.5, 25, 0.0), MASS=2.0, N_EVAL = 7, IgnoreM = True, Overwrite=True)
+# numerov("windowTest", GridInfo(3, -1.0, 1.0, 25, 0.0, -1.0, 1.0, 25, 0.0, 2.5, 4.5, 25, 0.0), MASS=2.0, N_EVAL = 7, IgnoreM = True, Overwrite=True)
 
-numerov("windowTestD2", GridInfo(3, -1.0, 1.0, 25, 0.0, -1.0, 1.0, 25, 0.0, 2.5, 4.5, 25, 0.0), MASS=4.0, N_EVAL = 7, IgnoreM = True, Overwrite=True)
+# numerov("windowTestD2", GridInfo(3, -1.0, 1.0, 25, 0.0, -1.0, 1.0, 25, 0.0, 2.5, 4.5, 25, 0.0), MASS=4.0, N_EVAL = 7, IgnoreM = True, Overwrite=True)
 
-numerov("windowTestHalf", GridInfo(3, -0.5, 0.5, 25, 0.0, -0.5, 0.5, 25, 0.0, 3.0, 4.0, 25, 0.0), MASS=4.0, N_EVAL = 7, IgnoreM = True, Overwrite=True)
+# numerov("windowTestHalf", GridInfo(3, -0.5, 0.5, 25, 0.0, -0.5, 0.5, 25, 0.0, 3.0, 4.0, 25, 0.0), MASS=4.0, N_EVAL = 7, IgnoreM = True, Overwrite=True)
 
-PsiGraph2D("surface", "windowTest", 3.32, 0)
-PsiGraph2D("surface", "windowTest", 3.32, 1)
-PsiGraph2D("surface", "windowTestD2", 3.32, 0)
-PsiGraph2D("surface", "windowTestD2", 3.32, 1)
+#PsiGraph2D("surface", "windowTest", 3.32, 0)
+#PsiGraph2D("surface", "windowTest", 3.32, 1)
+#PsiGraph2D("surface", "windowTestD2", 3.32, 0)
+#PsiGraph2D("surface", "windowTestD2", 3.32, 1)
 
-plt.show()
+#plt.show()
 
 #Accuracy testing
 def accuracyTesting():

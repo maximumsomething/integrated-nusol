@@ -48,7 +48,7 @@ alpha = 1
 
 class GridInfo:
 
-	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, Analytic = False, UserFunction = "", Limited = False, PotentialLimit = 0.0):
+	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, Analytic = False, UserFunction = "", Limited = False, PotentialLimit = 0.0, axis = None):
 
 		# We need to check here because the load function might give None instead of letting it default
 		if XDIV == None: XDIV = 1
@@ -88,12 +88,23 @@ class GridInfo:
 		self.UserFunction = UserFunction
 		self.Limited = Limited
 		self.PotentialLimit = PotentialLimit
+		self.axis = axis
 
-		if NDIM == 1:
+		if NDIM == 1 and axis == "z":
 			self.XMIN = XLEVEL
 			self.XMAX = XLEVEL
 			self.YMIN = YLEVEL
 			self.YMAX = YLEVEL
+		if NDIM == 1 and axis == "x":
+			self.YMIN = YLEVEL
+			self.YMAX = YLEVEL
+			self.ZMIN = ZLEVEL
+			self.ZMAX = ZLEVEL
+		if NDIM == 1 and axis == "y":
+			self.ZMIN = ZLEVEL
+			self.ZMAX = ZLEVEL
+			self.XMIN = XLEVEL
+			self.XMAX = XLEVEL
 		if NDIM == 2:
 			self.ZMIN = ZLEVEL
 			self.ZMAX = ZLEVEL
@@ -102,7 +113,7 @@ class GridInfo:
 		self.warned = False
 
 	def saveToFile(self, ProjectName, file):
-		print("ProjectName=%s\nNDIM=%d\nXMIN=%.8f\nXMAX=%.8f\nXDIV=%d\nXLEVEL=%.8f\nYMIN=%.8f\nYMAX=%.8f\nYDIV=%d\nYLEVEL=%.8f\nZMIN=%.8f\nZMAX=%.8f\nZDIV=%d\nZLEVEL=%.8f\nAnalytic=%s\nUserFunction=%s\n Limited=%s\n PotentialLimit=%d\n" % (ProjectName, self.NDIM, self.XMIN, self.XMAX, self.XDIV, self.XLEVEL, self.YMIN, self.YMAX, self.YDIV, self.YLEVEL, self.ZMIN, self.ZMAX, self.ZDIV, self.ZLEVEL, self.Analytic, self.UserFunction, self.Limited, self.PotentialLimit), file=file)
+		print("ProjectName=%s\nNDIM=%d\nXMIN=%.8f\nXMAX=%.8f\nXDIV=%d\nXLEVEL=%.8f\nYMIN=%.8f\nYMAX=%.8f\nYDIV=%d\nYLEVEL=%.8f\nZMIN=%.8f\nZMAX=%.8f\nZDIV=%d\nZLEVEL=%.8f\nAnalytic=%s\nUserFunction=%s\n Limited=%s\n PotentialLimit=%d\n Axis=%s\n" % (ProjectName, self.NDIM, self.XMIN, self.XMAX, self.XDIV, self.XLEVEL, self.YMIN, self.YMAX, self.YDIV, self.YLEVEL, self.ZMIN, self.ZMAX, self.ZDIV, self.ZLEVEL, self.Analytic, self.UserFunction, self.Limited, self.PotentialLimit, self.axis), file=file)
 
 	def getFilename(ProjectName, NDIM):
 		return "generateinfo%s%sD.dat" %(ProjectName, NDIM)
@@ -127,9 +138,11 @@ class GridInfo:
 		else: 
 			hx = 0.0
 			hy = 0.0
-
+#FIX!!!
 		if self.NDIM == 3 or self.NDIM == 1:
 			hz = (self.ZMAX - self.ZMIN) / (self.ZDIV - 1)
+			hx = (self.XMAX - self.XMIN) / (self.XDIV - 1)
+			hy = (self.YMAX - self.YMIN) / (self.YDIV - 1)
 		else:
 			hz = 0.0
 
@@ -242,11 +255,24 @@ def generateLJ(g):
 	hx, hy, hz = g.hxyz()
 
 	if g.NDIM == 1:
-		V = np.zeros(g.ZDIV)
-		for zcoord in range(0, g.ZDIV):
-			zval = g.ZMIN + zcoord * hz
-			pot = pointPotential(g.XLEVEL, g.YLEVEL, zval)
-			V[zcoord] = pot
+		if g.axis == "z":
+			V = np.zeros(g.ZDIV)
+			for zcoord in range(0, g.ZDIV):
+				zval = g.ZMIN + zcoord * hz
+				pot = pointPotential(g.XLEVEL, g.YLEVEL, zval)
+				V[zcoord] = pot
+		if g.axis == "x":
+			V = np.zeros(g.XDIV)
+			for xcoord in range(0, g.XDIV):
+				xval = g.XMIN + xcoord * hx
+				pot = pointPotential(xval, g.YLEVEL, g.ZLEVEL)
+				V[xcoord] = pot
+		if g.axis == "y":
+			V = np.zeros(g.YDIV)
+			for ycoord in range(0, g.YDIV):
+				yval = g.YMIN + ycoord * hy
+				pot = pointPotential(g.XLEVEL, yval, g.ZLEVEL)
+				V[ycoord] = pot
 
 	elif g.NDIM == 2:
 		V = np.zeros((g.XDIV, g.YDIV))
@@ -272,14 +298,25 @@ def generateLJ(g):
 #-------4.4-------#  
 ###check if axis right###   
 def generateFromUserFn(g):
-	hx, hy, hz = g.hxyz()
+	
 
 
-	if g.NDIM == 1:
+	if g.NDIM == 1 and g.axis == "z":
 		Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)	
-		z = zgrid
+		z = Zgrid
 		x = g.XLEVEL
 		y = g.YLEVEL
+	if g.NDIM == 1 and g.axis == "x":
+		Xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
+		x = Xgrid
+		z = g.ZLEVEL
+		y = g.YLEVEL
+
+	if g.NDIM == 1 and g.axis == "y":
+		Ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
+		y = Ygrid
+		x = g.XLEVEL
+		z = g.ZLEVEL
 
 	if g.NDIM == 2:
 		Xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
@@ -295,6 +332,7 @@ def generateFromUserFn(g):
 
 	try:
 		V = np.array(eval(g.UserFunction))
+		print(V)
 	except NameError:
 		raise ValueError("Invalid function. Make sure your function is a function of x, y, and z and that all non-elementary operations are proceded by 'np.'")
 		sys.exit()
@@ -314,12 +352,12 @@ def potentialAnalysis(g, V):
 		result = np.unravel_index(np.argmin(V), np.shape(V))
 		
 #-------4.6-------#
-		
+		#FIX for axes
 		if g.NDIM == 1:
-			#listofcoordinates = list(zip(g.ZMAX-result[0]*hz))
+			listofcoordinates = list((g.ZMAX-result[0]*hz))
 			#for coord in listofcoordinates:
 			#    min_list.append(coord)
-
+			print(listofcoordinates)
 			#print("The z position of the minimum is", (min_list))
 			minimumpot = np.amin(V)
 		
@@ -340,7 +378,6 @@ def potentialAnalysis(g, V):
 			#    min_list.append(coord)
 
 			#print("The x,y position of the minimum is", (min_list))
-
 
 			minimumpot = np.amin(V)
 
@@ -367,7 +404,8 @@ def potentialAnalysis(g, V):
 				delsquared = float("Nan")
 			zsecondderivative = float("Nan")
 		if g.NDIM == 3:
-			#listofcoordinates = list(zip(g.XMAX-result[0]*hx, g.YMAX-result[1]*hy, g.ZMAX-result[2]*hz))
+			listofcoordinates = list((g.XMAX-result[0]*hx, g.YMAX-result[1]*hy, g.ZMAX-result[2]*hz))
+			print(listofcoordinates)
 			#for coord in listofcoordinates:
 			#    min_list.append(coord)
 			#print("The x,y,z position of the minimum is", (min_list))
