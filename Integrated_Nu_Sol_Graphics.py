@@ -109,8 +109,13 @@ def Graph2D(Type, name, g, ZLEVEL, getSlice):
 
 		zSlider.on_changed(update)
 
+		# Commented out to enable multiple graphs in the same run
 		#plt.show()
 
+		# We need to keep a global reference to the slider, because pyplot is stupid
+		Graph2D.handles.append(zSlider)
+
+Graph2D.handles = []
 
 		
 def PotentialZGraphics(ProjectName, XLEVEL, YLEVEL):
