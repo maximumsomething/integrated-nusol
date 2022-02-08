@@ -7,6 +7,7 @@ import os.path
 from scipy.linalg import solve
 import scipy.optimize as op
 import scipy.sparse as sp
+import scipy.ndimage
 import numpy as np
 import collections
 np.set_printoptions(threshold=sys.maxsize)
@@ -220,6 +221,10 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 			       
 	elif g.Analytic == True:
 		V = generateFromUserFn(g)
+
+	#V = smoothPot(chopPot(V), g.NDIM)
+	#V = smoothChop(V)
+	V = chopPot(V)
 				
 #-------4.5-------# 
 	print("########################### \n Done generating potential! \n###########################)")
@@ -300,6 +305,35 @@ def generateFromUserFn(g):
 		sys.exit()
 
 	return V
+
+
+VMAX = 10000.0
+# Cuts off all potentials greater than VMAX
+def chopPot(V):
+	return np.where(V < VMAX, V, VMAX)
+
+# These smoothing functions don't seem to result in anything different from the hard limiter above
+# VMAX is a "soft cap". VCHOP is the hard cap. This transform probably has a name, but I don't know what it is.
+VCHOP = VMAX * 10.0
+def smoothChop(V):
+	#transformedV = VMAX + (V - VMAX) * (VCHOP*2 - (V - VMAX))/(VCHOP*2)
+	# m = VCHOP * np.exp(1.0)
+	# transformedV = VMAX + (V - VMAX) * (np.exp(-(V - VMAX)/m))
+	#return np.where(V < VCHOP, np.where(V < VMAX, V, transformedV), VCHOP)
+
+	b = 1 + 1/VMAX
+	transformedV = VMAX + np.log(V - VMAX + 1/np.log(b))/np.log(b) - np.log(1/np.log(b))/np.log(b)
+	return np.where(V < VMAX, V, transformedV)
+
+
+# Smoothing test, averages the point with its 2/8/26 neighbors
+def smoothPot(V, NDIM):
+	if NDIM == 1: kernel = np.ones((3))
+	if NDIM == 2: kernel = np.ones((3, 3))
+	if NDIM == 3: kernel = np.ones((3, 3, 3))
+	kernel /= np.sum(kernel)
+	return scipy.ndimage.convolve(V, kernel)
+
 
 
 def potentialAnalysis(g, V):

@@ -99,9 +99,12 @@ def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=2.0, HBAR =
 		endTimer()
 
 		# Sort eigs so lowest eigenvalue is first
-		norder = eval.argsort()
-		eval = eval[norder].real
-		evec = evec.T[norder].real
+		# norder = eval.argsort()
+		# eval = eval[norder].real
+		# evec = evec.T[norder].real
+
+		# Must do this if not sorting
+		evec = evec.T
 
 		writeEigs(eval, evec, EIGENVALUES_OUT, EIGENVECTORS_OUT)
 
@@ -422,7 +425,9 @@ def createNumerovMatrices3D(V, XDIV, YDIV, ZDIV, hx, MASS, HBAR):
 #-------5.10-------# 
 
 def solveEigsApprox(A, N_EVAL):
-	eval, evec =  sp.linalg.eigs(A=A, k=N_EVAL, which='SM')
+	# Using shift-invert mode was tested and did not lead to faster results
+	# The eigsh function seemed to lead to nonsense
+	eval, evec = sp.linalg.eigs(A=A, k=N_EVAL, which='SR')
 	eval /= 12
 	return eval, evec
 
@@ -437,9 +442,9 @@ def solveEigs(A, M, N_EVAL):
 	#startTimer("Multiply Minv")
 	#Q = A * Minv
 	
-	#eval, evec = sp.linalg.eigs(A=Q, k=N_EVAL, which='SM')
+	#eval, evec = sp.linalg.eigs(A=Q, k=N_EVAL, which='SR')
 
-	return sp.linalg.eigs(A=A, k=N_EVAL, M=M, which='SM')
+	return sp.linalg.eigsh(A=A, k=N_EVAL, M=M, which='SA')
 
 # Convert the eigenvector list into a (NDIM+1)-dimensional array, where the first dimension is per eigenvalue and the rest are the dimensions of V
 def convertEvec(evec, NDIM, XDIV, YDIV, ZDIV):
@@ -462,6 +467,10 @@ def convertEvec(evec, NDIM, XDIV, YDIV, ZDIV):
 					evec_array[:, x, y, z] = evec[:, z*XDIV*YDIV + x*YDIV + y]
 
 	return evec_array
+
+
+def eigAnalysis(evec):
+	print("psi^2 sum is:", np.sum(evec ** 2))
 
 
 # Write the eigs to a flat file, like NuSol did
