@@ -49,7 +49,7 @@ alpha = 1
 
 class GridInfo:
 
-	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, Analytic = False, UserFunction = "", Limited = False, PotentialLimit = 0.0, axis = None):
+	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, Analytic = False, UserFunction = "", Limited = True, PotentialLimit = 10000, axis = None):
 
 		# We need to check here because the load function might give None instead of letting it default
 		if XDIV == None: XDIV = 1
