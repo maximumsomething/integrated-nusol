@@ -42,8 +42,13 @@ atoms = [atom(-1.855325180842072, 0.0, 0.656043110880173, 1.8529, 2.4616, 0.0001
 #------3-------#
 hydrogensigma = 2.571
 hydrogenepsilon = 0.0000701127
-Ck = 8.9875517923E9
-alpha = 1
+
+# For electrostatic potential
+# Coulumb's constant in K-Å/(e-)^2
+Ck = 167101.002
+#Ck = 8.9875517923E9
+# Polarization constant of hydrogen in Å^3
+alpha = 0.675
 
 
 
@@ -445,7 +450,7 @@ def potentialAnalysis(g, V):
 				delsquared = float("Nan")
 			zsecondderivative = float("Nan")
 		if g.NDIM == 3:
-			listofcoordinates = list((g.XMAX-result[0]*hx, g.YMAX-result[1]*hy, g.ZMAX-result[2]*hz))
+			listofcoordinates = list((g.XMIN+result[0]*hx, g.YMIN+result[1]*hy, g.ZMIN+result[2]*hz))
 			print(listofcoordinates)
 			#for coord in listofcoordinates:
 			#    min_list.append(coord)
@@ -481,8 +486,13 @@ def potentialAnalysis(g, V):
 				delsquared = float("nan")
 
 
+def pointPotential(x, y, z):
+	return LJPotential(x, y, z) + EstaticPotential(x, y, z)
+	# return EstaticPotential(x, y, z)
+	# return LJPotential(x, y, z)
+
 # Calculates in hartree then returns kelvins
-def pointPotential(xval, yval, zval):
+def LJPotential(xval, yval, zval):
 	LJ = 0
 	for atom in atoms:
 		jointsigma = (atom.sigma + hydrogensigma)/2
@@ -493,7 +503,33 @@ def pointPotential(xval, yval, zval):
 
 	# Convert from Eh to K
 	LJ *= 315775.3268
+
 	return LJ
+
+def EstaticPotential(x, y, z):
+	# E is the electric field at the point,
+	# rHat is the unit vector pointing from the atom towards the point,
+	# Rsquared is the square of the distance between the atom and the point,
+	# atom.charge is the partial charge of the atom,
+	# alpha is the polarization constant of the hydrogen molecule, and 
+	# Ck is coloumb's constant.
+	E = (0.0, 0.0, 0.0)
+	for atom in atoms:
+		Rsquared = (x-atom.x)**2+(y-atom.y)**2+(z-atom.z)**2
+		R = np.sqrt(Rsquared)
+		rHat = (x-atom.x, y-atom.y, z-atom.z) / R
+		# print("rHat:", rHat, "Rsquared:", Rsquared)
+		E += atom.charge * rHat / Rsquared
+
+		# Exclusion radius hack: Potential set to limit if within 1A of atom
+		if R < 1.0:
+			return 100000000
+
+	# print("E:", E)
+	Ex, Ey, Ez = E
+	return -Ck * alpha/2 * (Ex**2 + Ey**2 + Ez**2)
+
+
 
 
 
