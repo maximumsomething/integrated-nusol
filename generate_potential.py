@@ -10,6 +10,7 @@ import scipy.sparse as sp
 import scipy.ndimage
 import numpy as np
 import collections
+import ast
 np.set_printoptions(threshold=sys.maxsize)
 
 from inus_common_util import *
@@ -28,7 +29,7 @@ class atom:
 	def __str__(self):
 		return f"atom @ ({self.x:.3f}, {self.y:.3f}, {self.z:.3f}) q={self.charge} σ={self.sigma} ε={self.epsilon} m={self.mass}"
 
-atoms = [atom(-1.855325180842072, 0.0, 0.656043110880173, 1.8529, 2.4616, 0.0001976046, 0),
+MOF5atoms = [atom(-1.855325180842072, 0.0, 0.656043110880173, 1.8529, 2.4616, 0.0001976046, 0),
 		 atom(0.9276625904210358, -1.606758738890191, 0.656043110880173, 1.8529, 2.4616, 0.0001976046, 0),
 		 atom(0.9276625904210358, 1.6067587388901914, 0.656043110880173, 1.8529, 2.4616, 0.0001976046, 0),
 		 atom(0.0, 0.0, 0.0, -2.2568, 3.118, 0.0000956054, 0),
@@ -48,13 +49,16 @@ hydrogenepsilon = 0.0000701127
 Ck = 8.9875517923E9
 alpha = 1
 
-for changeAtom in atoms:
+for changeAtom in MOF5atoms:
 	changeAtom.epsilon *= 315775.3268
 hydrogenepsilon *= 315775.3268
 
+
+from atoms_from_cif import AtomsFromCif
+
 class GridInfo:
 
-	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, Analytic = False, UserFunction = "", Limited = True, PotentialLimit = 10000, axis = None):
+	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, CifAtoms=False, AtomSrc=None, Analytic = False, UserFunction = "", Limited = True, PotentialLimit = 10000, axis = None):
 
 		# We need to check here because the load function might give None instead of letting it default
 		if XDIV == None: XDIV = 1
@@ -90,6 +94,8 @@ class GridInfo:
 		self.ZMAX = ZMAX
 		self.ZLEVEL = ZLEVEL
 		self.ZDIV = ZDIV
+		self.CifAtoms = CifAtoms
+		self.AtomSrc = AtomSrc
 		self.Analytic = Analytic
 		self.UserFunction = UserFunction
 		self.Limited = Limited
@@ -118,30 +124,11 @@ class GridInfo:
 		self.loadedFromFile = None
 		self.warned = False
 
-	def saveToFile(self, ProjectName, file):
-		print("ProjectName=%s\nNDIM=%d\nXMIN=%.8f\nXMAX=%.8f\nXDIV=%d\nXLEVEL=%.8f\nYMIN=%.8f\nYMAX=%.8f\nYDIV=%d\nYLEVEL=%.8f\nZMIN=%.8f\nZMAX=%.8f\nZDIV=%d\nZLEVEL=%.8f\nAnalytic=%s\nUserFunction=%s\n Limited=%s\n PotentialLimit=%d\n Axis=%s\n" % (ProjectName, self.NDIM, self.XMIN, self.XMAX, self.XDIV, self.XLEVEL, self.YMIN, self.YMAX, self.YDIV, self.YLEVEL, self.ZMIN, self.ZMAX, self.ZDIV, self.ZLEVEL, self.Analytic, self.UserFunction, self.Limited, self.PotentialLimit, self.axis), file=file)
-
-	def getFilename(ProjectName, NDIM):
-		return "generateinfo%s%sD.dat" %(ProjectName, NDIM)
-
-	def save(self, ProjectName):
-		filename = GridInfo.getFilename(ProjectName, self.NDIM)
-		if filename != self.loadedFromFile: # Don't overwrite file that we loaded from
-			try:
-				f = open(filename, 'w')
-				self.saveToFile(ProjectName, f)
-					
-			except IOError:
-				print("WARNING: The potential file", filename, "did not save. The file you wanted to save to was already opened.")
-
-	def load(ProjectName, NDIM):
-		return GridInfo.loadFromFile(GridInfo.getFilename(ProjectName, NDIM))
-
-	def WindowAround3DPoint(SIZE, X=0.0, Y=0.0, Z=0.0, DIV=25, Analytic=False, UserFunction="", Limited = True, PotentialLimit = 10000.0):
+	def WindowAround3DPoint(SIZE, X=0.0, Y=0.0, Z=0.0, DIV=25, CifAtoms=False, AtomSrc=None, Analytic=False, UserFunction="", Limited = True, PotentialLimit = 10000.0):
 		if type(SIZE) != float:
 			raise ValueError("SIZE must be floating-point.")
 
-		return GridInfo(3, X - SIZE/2.0, X + SIZE/2.0, DIV, 0.0, Y - SIZE/2.0, Y + SIZE/2.0, DIV, 0.0, Z - SIZE/2.0, Z + SIZE/2.0, DIV, 0.0, Analytic, UserFunction, Limited, PotentialLimit)
+		return GridInfo(3, X - SIZE/2.0, X + SIZE/2.0, DIV, 0.0, Y - SIZE/2.0, Y + SIZE/2.0, DIV, 0.0, Z - SIZE/2.0, Z + SIZE/2.0, DIV, 0.0, CifAtoms, AtomSrc, Analytic, UserFunction, Limited, PotentialLimit)
 
 	def hxyz(self):
 		if self.NDIM == 3 or self.NDIM == 2:
@@ -166,6 +153,34 @@ class GridInfo:
 				print("WARNING: hx, hy, and hz must be equal for NuSol to work, but instead, hx=",hx,", hy=",hy," and hz=",hz, sep="")
 
 		return hx, hy, hz
+
+	def atoms(self):
+		if self.CifAtoms:
+			return self.AtomSrc.atoms
+		else: return MOF5atoms
+
+	def saveToFile(self, ProjectName, file):
+		print("ProjectName=%s\nNDIM=%d\nXMIN=%.8f\nXMAX=%.8f\nXDIV=%d\nXLEVEL=%.8f\nYMIN=%.8f\nYMAX=%.8f\nYDIV=%d\nYLEVEL=%.8f\nZMIN=%.8f\nZMAX=%.8f\nZDIV=%d\nZLEVEL=%.8f\nCifAtoms=%s\nAnalytic=%s\nUserFunction=%s\n Limited=%s\n PotentialLimit=%d\n Axis=%s\n" % (ProjectName, self.NDIM, self.XMIN, self.XMAX, self.XDIV, self.XLEVEL, self.YMIN, self.YMAX, self.YDIV, self.YLEVEL, self.ZMIN, self.ZMAX, self.ZDIV, self.ZLEVEL, self.CifAtoms, self.Analytic, self.UserFunction, self.Limited, self.PotentialLimit, self.axis), file=file)
+
+		if self.CifAtoms:
+			print(f"AtomSrcFile={self.AtomSrc.file}\nAtomSrcRadius={self.AtomSrc.radius}\nBINDING_LABEL={self.AtomSrc.BINDING_LABEL}\nORIGIN_LABEL={self.AtomSrc.ORIGIN_LABEL}\nEXCLUDED_SITES={self.AtomSrc.EXCLUDED_SITES}", file=file)
+
+
+	def getFilename(ProjectName, NDIM):
+		return "generateinfo%s%sD.dat" %(ProjectName, NDIM)
+
+	def save(self, ProjectName):
+		filename = GridInfo.getFilename(ProjectName, self.NDIM)
+		if filename != self.loadedFromFile: # Don't overwrite file that we loaded from
+			try:
+				f = open(filename, 'w')
+				self.saveToFile(ProjectName, f)
+					
+			except IOError:
+				print("WARNING: The potential file", filename, "did not save. The file you wanted to save to was already opened.")
+
+	def load(ProjectName, NDIM):
+		return GridInfo.loadFromFile(GridInfo.getFilename(ProjectName, NDIM))
 	
 	"""
 	File format:
@@ -189,7 +204,11 @@ class GridInfo:
 
 			print("read from file:", v)
 
-			gridInfo =  GridInfo(v['NDIM'], v['XMIN'], v['XMAX'], v['XDIV'], v['XLEVEL'], v['YMIN'], v['YMAX'], v['YDIV'], v['YLEVEL'], v['ZMIN'], v['ZMAX'], v['ZDIV'], v['ZLEVEL'], v['Analytic'], v['UserFunction'])
+			if v['CifAtoms']:
+				AtomSrc = AtomsFromCif(v['AtomSrcFile'], v['AtomSrcRadius'], v['BINDING_LABEL'], v['ORIGIN_LABEL'], v['EXCLUDED_SITES'])
+			else: AtomSrc = None
+
+			gridInfo = GridInfo(v['NDIM'], v['XMIN'], v['XMAX'], v['XDIV'], v['XLEVEL'], v['YMIN'], v['YMAX'], v['YDIV'], v['YLEVEL'], v['ZMIN'], v['ZMAX'], v['ZDIV'], v['ZLEVEL'], v['CifAtoms'], AtomSrc, v['Analytic'], v['UserFunction'])
 			gridInfo.loadedFromFile = path
 			return gridInfo
 		except IOError:
@@ -204,8 +223,12 @@ def tryParseStringToType(string):
 		try:
 			return float(string)
 		except ValueError:
-			if string == "True": return True
+			if string == "": return ""
+			elif string == "True": return True
 			elif string == "False": return False
+			if string[0] == '[': 
+				# Parse array
+				return ast.literal_eval(string)
 			else: return string
 
 # Floating point can't exactly represent all numbers, so this function is needed to check "equality"
@@ -219,9 +242,6 @@ def inexactEqual(a, b):
 #-------4-------#
 # Returns values in kelvins
 def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
-	for atom in atoms:
-		print(atom)
-
 	g = gridInfo # for shortness
 		#-------4.1-------#
 	if type(Overwrite) != bool:
@@ -244,7 +264,7 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 
 
 	if g.Analytic == False:
-		V = generateLJ(atoms, g)
+		V = generateLJ(g.atoms(), g)
 			       
 	elif g.Analytic == True:
 		V = generateFromUserFn(g)

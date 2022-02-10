@@ -1,16 +1,34 @@
 import gemmi
 import numpy as np
+import typing
+
+from inus_common_util import *
 
 from generate_potential import atom
 
 
-def atoms_from_cif(file, radius=6.0, BINDING_LABEL="D1", ORIGIN_LABEL="O1", EXCLUDED_SITES=["D1", "D2", "D3", "D4", "D5", "D6"]):
+# Loads a CIF (crystallographic information) file, finds all atoms in a radius around the binding site, 
+# and transforms it so that the origin site is at the origin and the binding site is along the +z axis.
 
+
+class AtomsFromCif:
+
+	def __init__(self, file, radius=6.0, BINDING_LABEL="D1", ORIGIN_LABEL="O1", EXCLUDED_SITES=["D1", "D2", "D3", "D4", "D5"]):
+		self.file = file
+		self.radius = radius
+		self.BINDING_LABEL = BINDING_LABEL
+		self.ORIGIN_LABEL = ORIGIN_LABEL
+		self.EXCLUDED_SITES = EXCLUDED_SITES
+
+		self.atoms = load_atoms_from_cif(file, radius, BINDING_LABEL, ORIGIN_LABEL, EXCLUDED_SITES)
+
+def load_atoms_from_cif(file, radius=6.0, BINDING_LABEL="D1", ORIGIN_LABEL="O1", EXCLUDED_SITES=["D1", "D2", "D3", "D4", "D5"]):
+	startTimer("Find nearby atoms")
 
 	structure = gemmi.read_small_structure(file)
 
 	print(structure)
-	print(structure.cell)
+	# print(structure.cell)
 	print("Num sites:", len(structure.sites))
 	# print(structure[0])
 
@@ -24,16 +42,21 @@ def atoms_from_cif(file, radius=6.0, BINDING_LABEL="D1", ORIGIN_LABEL="O1", EXCL
 
 
 	ns = gemmi.NeighborSearch(structure, radius*2).populate()
-	print(ns)
+	# print(ns)
 	neighbors = ns.find_site_neighbors(bindingSite, max_dist=radius)
 
 	# Search for nearest atom with the origin site's label
+	originSite = None
+	originPos = None
 	for mark in neighbors:
 		site = mark.to_site(structure)
 		if site.label == ORIGIN_LABEL:
 			originSite = site
 			originPos = mark.pos()
 			break
+
+	if originSite == None:
+		raise ValueError(f"Origin site {ORIGIN_LABEL} not found within radius")
 
 	# originPos = originSite.orth(structure.cell)
 	bindingPos = bindingSite.orth(structure.cell)
@@ -56,9 +79,9 @@ def atoms_from_cif(file, radius=6.0, BINDING_LABEL="D1", ORIGIN_LABEL="O1", EXCL
 	# I + vx + vx^2(1/(1 + dot))
 	rotationMatrix = np.array([[1,0,0], [0,1,0], [0,0,1]]) + vx + np.matmul(vx, vx) * mult
 
-	print(translationVec)
-	print(bindingPos)
-	print(rotationMatrix)
+	# print(translationVec)
+	# print(bindingPos)
+	# print(rotationMatrix)
 
 
 
@@ -82,21 +105,21 @@ def atoms_from_cif(file, radius=6.0, BINDING_LABEL="D1", ORIGIN_LABEL="O1", EXCL
 
 
 	for _, mark in trimmedNeighbors.items():
-		print(mark)
+		# print(mark)
 
 		# print(mark.x, mark.y, mark.z)
 		# print(mark.pos())
 		pos = np.array([mark.x, mark.y, mark.z])
-		print(pos)
+		# print(pos)
 		pos = pos + translationVec
-		print(pos)
+		# print(pos)
 		pos = np.matmul(rotationMatrix, pos)
-		print(pos)
+		# print(pos)
 		
 
 		mSite = mark.to_site(structure)
-		print(mSite)
-		print(mSite.element)
+		# print(mSite)
+		# print(mSite.element)
 
 		if mSite.label not in EXCLUDED_SITES:
 
@@ -105,11 +128,12 @@ def atoms_from_cif(file, radius=6.0, BINDING_LABEL="D1", ORIGIN_LABEL="O1", EXCL
 			# Note: the files don't seem to actually have charge
 			atoms.append(atom(pos[0], pos[1], pos[2], charge=mSite.charge, sigma=LJVals[0], epsilon=LJVals[1], mass=mSite.element.weight))
 
-		
+	endTimer()
 	return atoms
 
 
 # Point that can be used in a Dictionary and will compare as equal to very similar points
+# Designed for angstrom values in the range 0-100 and looks two places past the decimal.
 class HashablePoint:
 	def __init__(self, x, y, z):
 		self.x = x; self.y = y; self.z = z
