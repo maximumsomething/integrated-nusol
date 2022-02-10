@@ -25,6 +25,9 @@ class atom:
 		self.epsilon=epsilon
 		self.mass=mass
 
+	def __str__(self):
+		return f"atom @ ({self.x:.3f}, {self.y:.3f}, {self.z:.3f}) q={self.charge} σ={self.sigma} ε={self.epsilon} m={self.mass}"
+
 atoms = [atom(-1.855325180842072, 0.0, 0.656043110880173, 1.8529, 2.4616, 0.0001976046, 0),
 		 atom(0.9276625904210358, -1.606758738890191, 0.656043110880173, 1.8529, 2.4616, 0.0001976046, 0),
 		 atom(0.9276625904210358, 1.6067587388901914, 0.656043110880173, 1.8529, 2.4616, 0.0001976046, 0),
@@ -45,7 +48,9 @@ hydrogenepsilon = 0.0000701127
 Ck = 8.9875517923E9
 alpha = 1
 
-
+for changeAtom in atoms:
+	changeAtom.epsilon *= 315775.3268
+hydrogenepsilon *= 315775.3268
 
 class GridInfo:
 
@@ -214,6 +219,9 @@ def inexactEqual(a, b):
 #-------4-------#
 # Returns values in kelvins
 def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
+	for atom in atoms:
+		print(atom)
+
 	g = gridInfo # for shortness
 		#-------4.1-------#
 	if type(Overwrite) != bool:
@@ -236,7 +244,7 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 
 
 	if g.Analytic == False:
-		V = generateLJ(g)
+		V = generateLJ(atoms, g)
 			       
 	elif g.Analytic == True:
 		V = generateFromUserFn(g)
@@ -263,7 +271,7 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 	return V
 
 #-------4.3-------#
-def generateLJ(g):
+def generateLJ(atoms, g):
 	hx, hy, hz = g.hxyz()
 
 	if g.NDIM == 1:
@@ -271,19 +279,19 @@ def generateLJ(g):
 			V = np.zeros(g.ZDIV)
 			for zcoord in range(0, g.ZDIV):
 				zval = g.ZMIN + zcoord * hz
-				pot = pointPotential(g.XLEVEL, g.YLEVEL, zval)
+				pot = pointPotential(atoms, g.XLEVEL, g.YLEVEL, zval)
 				V[zcoord] = pot
 		if g.axis == "x":
 			V = np.zeros(g.XDIV)
 			for xcoord in range(0, g.XDIV):
 				xval = g.XMIN + xcoord * hx
-				pot = pointPotential(xval, g.YLEVEL, g.ZLEVEL)
+				pot = pointPotential(atoms, xval, g.YLEVEL, g.ZLEVEL)
 				V[xcoord] = pot
 		if g.axis == "y":
 			V = np.zeros(g.YDIV)
 			for ycoord in range(0, g.YDIV):
 				yval = g.YMIN + ycoord * hy
-				pot = pointPotential(g.XLEVEL, yval, g.ZLEVEL)
+				pot = pointPotential(atoms, g.XLEVEL, yval, g.ZLEVEL)
 				V[ycoord] = pot
 
 	elif g.NDIM == 2:
@@ -292,7 +300,7 @@ def generateLJ(g):
 			for ycoord in range(0, g.YDIV):
 				xval = g.XMIN + xcoord * hx
 				yval = g.YMIN + ycoord * hy
-				pot = pointPotential(xval, yval, g.ZLEVEL)
+				pot = pointPotential(atoms, xval, yval, g.ZLEVEL)
 				V[xcoord, ycoord] = pot
 	
 	elif g.NDIM == 3:
@@ -303,7 +311,7 @@ def generateLJ(g):
 					xval = g.XMIN + xcoord * hx
 					yval = g.YMIN + ycoord * hy
 					zval = g.ZMIN + zcoord * hz
-					pot = pointPotential(xval, yval, zval)
+					pot = pointPotential(atoms, xval, yval, zval)
 					V[xcoord, ycoord, zcoord] = pot	
 	return V
 
@@ -482,7 +490,7 @@ def potentialAnalysis(g, V):
 
 
 # Calculates in hartree then returns kelvins
-def pointPotential(xval, yval, zval):
+def pointPotential(atoms, xval, yval, zval):
 	LJ = 0
 	for atom in atoms:
 		jointsigma = (atom.sigma + hydrogensigma)/2
@@ -492,7 +500,7 @@ def pointPotential(xval, yval, zval):
 		LJ += LJpointval
 
 	# Convert from Eh to K
-	LJ *= 315775.3268
+	# LJ *= 315775.3268
 	return LJ
 
 
