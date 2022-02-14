@@ -4,8 +4,15 @@ import operator
 import os
 import os.path
 from mpl_toolkits.mplot3d import axes3d
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.widgets as widgets
+
+# matplotlib.use('module://mplopengl.backend_qtgl')
+
+from skimage.measure import marching_cubes
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
 np.set_printoptions(threshold=sys.maxsize)
 
 import generate_potential as gp
@@ -43,6 +50,10 @@ def GraphicalGenerate1D(ProjectName, XLEVEL, YLEVEL, ZLEVEL, axis):
 		axisgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
 
 	return V, axisgrid
+
+
+# Need to keep global reference to graphs, because pyplot is stupid
+graphHandles = []
 
 	
 
@@ -93,6 +104,7 @@ def PsiGraph2D(Type, ProjectName, ZLEVEL, EVAL_NUM=0):
 	Graph2D(Type, name, g, ZLEVEL, getSlice)
 
 
+# Don't call directly, use the PotentialGraph2D and PsiGraph2D functions instead
 # g is a GridInfo defining the grid to graph
 # getSlice(ZLEVEL) returns the grid at the given Z-level (Potential or psi)
 def Graph2D(Type, name, g, ZLEVEL, getSlice):
@@ -138,6 +150,8 @@ def Graph2D(Type, name, g, ZLEVEL, getSlice):
 			elif Type == 'surface':
 				axis.plot_surface(meshx, meshy, newGrid)
 
+			plt.tight_layout()
+
 			plt.draw()
 
 		# Draw first plot
@@ -149,9 +163,87 @@ def Graph2D(Type, name, g, ZLEVEL, getSlice):
 		#plt.show()
 
 		# We need to keep a global reference to the slider, because pyplot is stupid
-		Graph2D.handles.append(zSlider)
+		graphHandles.append(zSlider)
 
-Graph2D.handles = []
+
+
+def PotentialVoxel3D(ProjectName, level=0.0, minlev=None, maxlev=None):
+	V = np.load("Potential%s3D.npy" % (ProjectName))
+	title = f"Potential for {ProjectName}"
+	Voxel3D(ProjectName, title, V, level, minlev, maxlev)
+
+
+def PsiVoxel3D(ProjectName, EVAL_NUM=0, level=None, minlev=None, maxlev=None):
+	evec = np.load("vecarray%s%sD.npy" %(ProjectName, 3))[EVAL_NUM]
+
+	evec = np.square(evec)
+
+	valFile = open("valout%s%sD.dat" %(ProjectName, 3))
+	lines = valFile.readlines()
+
+	title = f"Psi^2 for {ProjectName}, Eval {EVAL_NUM} which is {lines[EVAL_NUM]}"
+	Voxel3D(ProjectName, title, evec, level, minlev, maxlev)
+
+
+
+# Don't call directly, use the PotentialVoxel3D and PsiVoxel3D functions instead
+def Voxel3D(ProjectName, graphTitle, arr, level=None, minlev=None, maxlev=None):
+
+	g = gp.GridInfo.load(ProjectName, 3)
+
+	if minlev == None: minlev = np.amin(arr)
+	if maxlev == None: maxlev = np.amax(arr)
+
+	if level == None: level = np.average(arr)
+
+	fig = plt.figure(num=graphTitle)
+	axis = fig.add_subplot(111, projection='3d')
+
+	levelSlider = widgets.Slider(
+		ax=plt.axes([0.25, 0.0, 0.65, 0.03]), 
+		label='Boundary level',
+		valmin=minlev,
+		valmax=maxlev,
+		valinit=level
+	)
+	def update(val):
+		axis.clear()
+
+		# https://scikit-image.org/docs/dev/auto_examples/edges/plot_marching_cubes.html
+
+		verts, faces, normals, values = marching_cubes(arr, val, spacing=g.hxyz())
+		verts += (g.XMIN, g.YMIN, g.ZMIN) # Correct axis
+		mesh = Poly3DCollection(verts[faces])
+		# mesh.set_edgecolor('k')
+
+		faceNormals = np.average(normals[faces], axis=1)
+
+		# rainbow
+		# colors = (faceNormals + 1) / 2
+
+		# grayscale
+		lightSource = [0, 0, 1]
+		colors = (np.dot(faceNormals, lightSource) + 1) / 2
+		colors = np.vstack((colors, colors, colors)).T
+
+		mesh.set_facecolors(colors)
+		axis.add_collection3d(mesh)
+
+		axis.set_xlim(g.XMIN, g.XMAX)
+		axis.set_ylim(g.YMIN, g.YMAX)
+		axis.set_zlim(g.ZMIN, g.ZMAX)
+
+		plt.tight_layout()
+
+		#axis.voxels(filled=(V < val))
+		plt.draw()
+
+	levelSlider.on_changed(update)
+	update(level)
+
+	graphHandles.append(levelSlider)
+
+
 
 		
 def PotentialGraphics1D(ProjectName, XLEVEL = None, YLEVEL = None, ZLEVEL = None, axis = "z"):  
