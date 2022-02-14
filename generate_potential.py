@@ -344,8 +344,8 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 		V = generateFromUserFn(g)
 
 	if g.Limited:
-		#V = smoothPot(chopPot(V, g.PotentialLimit), g.NDIM)
-		#V = smoothChop(V, g.PotentialLimit)
+		# V = smoothPot(chopPot(V, g.PotentialLimit), g.NDIM)
+		# V = smoothChop(V, g.PotentialLimit)
 		V = chopPot(V, g.PotentialLimit)
 				
 #-------4.5-------# 
@@ -364,57 +364,29 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 	
 	return V
 
-#-------4.3-------#
+
 def generateNumeric(atoms, g):
-	hx, hy, hz = g.hxyz()
-
-	if g.NDIM == 1:
-		if g.axis == "z":
-			V = np.zeros(g.ZDIV)
-			for zcoord in range(0, g.ZDIV):
-				zval = g.ZMIN + zcoord * hz
-				pot = pointPotential(atoms, g.XLEVEL, g.YLEVEL, zval)
-				V[zcoord] = pot
-		if g.axis == "x":
-			V = np.zeros(g.XDIV)
-			for xcoord in range(0, g.XDIV):
-				xval = g.XMIN + xcoord * hx
-				pot = pointPotential(atoms, xval, g.YLEVEL, g.ZLEVEL)
-				V[xcoord] = pot
-		if g.axis == "y":
-			V = np.zeros(g.YDIV)
-			for ycoord in range(0, g.YDIV):
-				yval = g.YMIN + ycoord * hy
-				pot = pointPotential(atoms, g.XLEVEL, yval, g.ZLEVEL)
-				V[ycoord] = pot
-
-	elif g.NDIM == 2:
-		V = np.zeros((g.XDIV, g.YDIV))
-		for xcoord in range(0, g.XDIV):
-			for ycoord in range(0, g.YDIV):
-				xval = g.XMIN + xcoord * hx
-				yval = g.YMIN + ycoord * hy
-				pot = pointPotential(atoms, xval, yval, g.ZLEVEL)
-				V[xcoord, ycoord] = pot
+	x, y, z = meshgrids(g)
 	
-	elif g.NDIM == 3:
-		V = np.zeros((g.XDIV, g.YDIV, g.ZDIV))
-		for xcoord in range(0, g.XDIV):
-			for ycoord in range(0, g.YDIV):
-				for zcoord in range(0, g.ZDIV):
-					xval = g.XMIN + xcoord * hx
-					yval = g.YMIN + ycoord * hy
-					zval = g.ZMIN + zcoord * hz
-					pot = pointPotential(atoms, xval, yval, zval)
-					V[xcoord, ycoord, zcoord] = pot	
-	return V
+	return pointPotential(atoms, x, y, z)
+	
 
 #-------4.4-------#  
-###check if axis right###   
 def generateFromUserFn(g):
 	
+	x, y, z = meshgrids(g)
+
+	try:
+		V = np.array(eval(g.UserFunction))
+		print(V)
+	except NameError:
+		raise ValueError("Invalid function. Make sure your function is a function of x, y, and z and that all non-elementary operations are proceded by 'np.'")
+		sys.exit()
+
+	return V
 
 
+def meshgrids(g):
 	if g.NDIM == 1 and g.axis == "z":
 		Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)	
 		z = Zgrid
@@ -444,14 +416,7 @@ def generateFromUserFn(g):
 		Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
 		x,y,z = np.meshgrid(Xgrid, Ygrid, Zgrid)
 
-	try:
-		V = np.array(eval(g.UserFunction))
-		print(V)
-	except NameError:
-		raise ValueError("Invalid function. Make sure your function is a function of x, y, and z and that all non-elementary operations are proceded by 'np.'")
-		sys.exit()
-
-	return V
+	return (x, y, z)
 
 
 # Cuts off all potentials greater than VMAX
@@ -462,11 +427,11 @@ def chopPot(V, VMAX):
 # VMAX is a "soft cap". VCHOP is the hard cap. This transform probably has a name, but I don't know what it is.
 
 def smoothChop(V, VMAX):
-	VCHOP = VMAX * 10.0
-	#transformedV = VMAX + (V - VMAX) * (VCHOP*2 - (V - VMAX))/(VCHOP*2)
+	# VCHOP = VMAX * 10.0
+	# transformedV = VMAX + (V - VMAX) * (VCHOP*2 - (V - VMAX))/(VCHOP*2)
 	# m = VCHOP * np.exp(1.0)
 	# transformedV = VMAX + (V - VMAX) * (np.exp(-(V - VMAX)/m))
-	#return np.where(V < VCHOP, np.where(V < VMAX, V, transformedV), VCHOP)
+	# return np.where(V < VCHOP, np.where(V < VMAX, V, transformedV), VCHOP)
 
 	b = 1 + 1/VMAX
 	transformedV = VMAX + np.log(V - VMAX + 1/np.log(b))/np.log(b) - np.log(1/np.log(b))/np.log(b)
@@ -581,9 +546,10 @@ def potentialAnalysis(g, V):
 
 
 def pointPotential(atoms, x, y, z):
-	# return LJPotential(atoms, x, y, z) + EstaticPotential(atoms, x, y, z)
+	V = LJPotential(atoms, x, y, z) + EstaticPotential(atoms, x, y, z)
+	return excludeAtoms(V, atoms, x, y, z)
 	# return EstaticPotential(atoms, x, y, z)
-	return LJPotential(atoms, x, y, z)
+	# return LJPotential(atoms, x, y, z)
 
 # Calculates in hartree then returns kelvins
 def LJPotential(atoms, xval, yval, zval):
@@ -604,7 +570,14 @@ def EstaticPotential(atoms, x, y, z):
 	# atom.charge is the partial charge of the atom,
 	# alpha is the polarization constant of the hydrogen molecule, and 
 	# Ck is coloumb's constant.
-	E = (0.0, 0.0, 0.0)
+	#E = (0.0, 0.0, 0.0)
+
+	if type(x) == np.ndarray:
+		assert(x.shape == y.shape and x.shape == z.shape)
+		E = (np.zeros(x.shape), np.zeros(x.shape), np.zeros(x.shape))
+	else:
+		E = (0.0, 0.0, 0.0)
+
 	for atom in atoms:
 		Rsquared = (x-atom.x)**2+(y-atom.y)**2+(z-atom.z)**2
 		R = np.sqrt(Rsquared)
@@ -612,25 +585,19 @@ def EstaticPotential(atoms, x, y, z):
 		# print("rHat:", rHat, "R:", R)
 		E += atom.charge * rHat / Rsquared
 
-		# Exclusion radius hack: Potential set to limit if within 1A of atom
-		# if R < 1.0:
-		# 	return 100000000
-
 	# print("E:", E)
 	Ex, Ey, Ez = E
-	return -Ck * alpha/2 * (Ex**2 + Ey**2 + Ez**2)
+	return -Ck * (alpha/2) * (Ex**2 + Ey**2 + Ez**2)
 
 
+# Exclude points within 1A of atom
+def excludeAtoms(V, atoms, x, y, z):
+	mask = np.isnan(V)
+	for atom in atoms:
+		radius = np.sqrt((x-atom.x)**2+(y-atom.y)**2+(z-atom.z)**2)
+		mask = mask & (radius < 1.0)
+
+	return np.where(mask, 1000000000, V)
 
 
-
-def PotentialLimiter(ProjectName, NDIM, PotentialLimit):
-	V = np.load("Potential%s%dD.npy" %(ProjectName, NDIM))
-	V[V > PotentialLimit] = PotentialLimit
-	np.save("Potential%s%dDLimited%s.npy" %(str(PotentialLimit), NDIM, PotentialLimit), V)
-	g = GridInfo.load(ProjectName, NDIM)
-	g.Limited = True
-	g.PotentialLimit = PotentialLimit
-	NProjectName = "Limited%s%s" %(PotentialLimit, ProjectName)
-	g.save(NProjectName)
 	
