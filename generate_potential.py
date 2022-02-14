@@ -29,30 +29,101 @@ class atom:
 	def __str__(self):
 		return f"atom @ ({self.x:.3f}, {self.y:.3f}, {self.z:.3f}) q={self.charge} σ={self.sigma} ε={self.epsilon} m={self.mass}"
 
-MOF5atoms = [atom(-1.855325180842072, 0.0, 0.656043110880173, 1.8529, 2.4616, 0.0001976046, 0),
-		 atom(0.9276625904210358, -1.606758738890191, 0.656043110880173, 1.8529, 2.4616, 0.0001976046, 0),
-		 atom(0.9276625904210358, 1.6067587388901914, 0.656043110880173, 1.8529, 2.4616, 0.0001976046, 0),
-		 atom(0.0, 0.0, 0.0, -2.2568, 3.118, 0.0000956054, 0),
-		 atom(-2.2071535575638297, -1.575575329839865, 1.745098923652563, -1.0069, 3.118, 0.0000956054, 0),
-		 atom(2.468065039999284, -1.1236633859835425, 1.745098923652563, -1.0069, 3.118, 0.0000956054, 0),
-		 atom(-0.26091148243545437, 2.6992387158234075, 1.745098923652563, -1.0069, 3.118, 0.0000956054, 0),
-		 atom(2.468065039999284, 1.1236633859835425, 1.745098923652563, -1.0069, 3.118, 0.0000956054, 0),
-		 atom(-0.2609114824354546, -2.6992387158234075, 1.745098923652563, -1.0069, 3.118, 0.0000956054, 0),
-		 atom(-2.2071535575638292, 1.575575329839865, 1.745098923652563, -1.0069, 3.118, 0.0000956054, 0),
-		 atom(-1.46152887986063, -2.53144227664784, 2.0669139636988607, 1.0982, 3.431, 0.000167333, 0),
-		 atom(2.92305775972126, 0.0, 2.0669139636988607, -0.1378, 3.431, 0.000167333, 0),
-		 atom(-1.4615288798606296, 2.53144227664784, 2.0669139636988607, -0.0518, 3.431, 0.000167333, 0)]
+
+# MOF5atoms = [atom(-1.855325180842072, 0.0, 0.656043110880173, 1.8529, 2.4616, 0.0001976046, 0),
+# 		 atom(0.9276625904210358, -1.606758738890191, 0.656043110880173, 1.8529, 2.4616, 0.0001976046, 0),
+# 		 atom(0.9276625904210358, 1.6067587388901914, 0.656043110880173, 1.8529, 2.4616, 0.0001976046, 0),
+# 		 atom(0.0, 0.0, 0.0, -2.2568, 3.118, 0.0000956054, 0),
+# 		 atom(-2.2071535575638297, -1.575575329839865, 1.745098923652563, -1.0069, 3.118, 0.0000956054, 0),
+# 		 atom(2.468065039999284, -1.1236633859835425, 1.745098923652563, -1.0069, 3.118, 0.0000956054, 0),
+# 		 atom(-0.26091148243545437, 2.6992387158234075, 1.745098923652563, -1.0069, 3.118, 0.0000956054, 0),
+# 		 atom(2.468065039999284, 1.1236633859835425, 1.745098923652563, -1.0069, 3.118, 0.0000956054, 0),
+# 		 atom(-0.2609114824354546, -2.6992387158234075, 1.745098923652563, -1.0069, 3.118, 0.0000956054, 0),
+# 		 atom(-2.2071535575638292, 1.575575329839865, 1.745098923652563, -1.0069, 3.118, 0.0000956054, 0),
+# 		 atom(-1.46152887986063, -2.53144227664784, 2.0669139636988607, 1.0982, 3.431, 0.000167333, 0),
+# 		 atom(2.92305775972126, 0.0, 2.0669139636988607, -0.1378, 3.431, 0.000167333, 0),
+# 		 atom(-1.4615288798606296, 2.53144227664784, 2.0669139636988607, -0.0518, 3.431, 0.000167333, 0)]
+
+MOF5atoms = [
+atom(1.606763689, -0.927665448, 0.655958529, 1.8529, 2.4616, 62.3993, 0),
+atom(0.0, 0.0, 0.0, -2.2568, 3.118, 30.19, 0),
+atom(1.123635314, 2.468097822, 1.74498432, -1.0069, 3.118, 30.19, 0),
+atom(0, 2.923045267, 2.06690513, 1.0982, 3.431, 52.84, 0),
+atom(0, 4.160426158, 2.941865549, -0.1378, 3.431, 52.84, 0),
+atom(1.194904536, 4.725064489, 3.341125142, -.0518, 3.431, 52.84, 0),
+atom(2.150535026, 4.266414844, 3.016810868, .1489, 2.571, 22.14, 0),
+atom(-1.123635314, 2.467886268, 1.745283503, -1.0069, 3.118, 30.19, 0),
+atom(-1.194904536, 4.725064489, 3.341125142, -.0518, 3.431, 52.84, 0),
+atom(-2.150535026, 4.266414844, 3.016810868, .1489, 2.571, 22.14, 0),
+atom(1.123635314, 8.109615384, 5.734588418, -1.0069, 3.118, 30.19, 0),
+atom(0, 7.654667939, 5.412667607, 1.0982, 3.431, 52.84, 0),
+atom(0, 6.417287048, 4.537707188, -0.1378, 3.431, 52.84, 0),
+atom(1.194904536, 5.852648717, 4.138447596, -.0518, 3.431, 52.84, 0),
+atom(2.150535026, 6.311298361, 4.462761869, .1489, 2.571, 22.14, 0),
+atom(-1.123635314, 8.109615384, 5.734588418, -1.0069, 3.118, 30.19, 0),
+atom(-1.194904536, 5.852648717, 4.138447596, -.0518, 3.431, 52.84, 0),
+atom(-2.150535026, 6.311298361, 4.462761869, .1489, 2.571, 22.14, 0),
+atom(-1.606763689, 0.927665448, 0.655958529, 1.8529, 2.4616, 62.3993, 0),
+atom(-2.69925307, -0.260952185, 1.74498432, -1.0069, 3.118, 30.19, 0),
+atom(-2.531431458, -1.461522634, 2.06690513, 1.0982, 3.431, 52.84, 0),
+atom(-3.603034744, -2.080213079, 2.941865549, -0.1378, 3.431, 52.84, 0),
+atom(-4.68947815, -1.327714562, 3.341125142, -.0518, 3.431, 52.84, 0),
+atom(-4.770091151, -0.270789458, 3.016810868, .1489, 2.571, 22.14, 0),
+atom(-1.575434545, -2.20703986, 1.745283503, -1.0069, 3.118, 30.19, 0),
+atom(-3.494573614, -3.397349927, 3.341125142, -.0518, 3.431, 52.84, 0),
+atom(-2.619556125, -3.995625386, 3.016810868, .1489, 2.571, 22.14, 0),
+atom(-7.584950594, -3.081710965, 5.734588418, -1.0069, 3.118, 30.19, 0),
+atom(-6.629136892, -3.827333969, 5.412667607, 1.0982, 3.431, 52.84, 0),
+atom(-5.557533607, -3.208643524, 4.537707188, -0.1378, 3.431, 52.84, 0),
+atom(-5.665994736, -1.891506675, 4.138447596, -.0518, 3.431, 52.84, 0),
+atom(-6.541012225, -1.293231217, 4.462761869, .1489, 2.571, 22.14, 0),
+atom(-6.46131528, -5.027904418, 5.734588418, -1.0069, 3.118, 30.19, 0),
+atom(-4.4710902, -3.961142041, 4.138447596, -.0518, 3.431, 52.84, 0),
+atom(-4.390477199, -5.018067145, 4.462761869, .1489, 2.571, 22.14, 0),
+atom(0, -1.855330896, 0.655958529, 1.8529, 2.4616, 62.3993, 0),
+atom(1.575617756, -2.207145638, 1.74498432, -1.0069, 3.118, 30.19, 0),
+atom(2.531431458, -1.461522634, 2.06690513, 3.431, 52.84, 0),
+atom(3.603034744, -2.080213079, 2.941865549, 3.431, 52.84, 0),
+atom(3.494573614, -3.397349927, 3.341125142, -.0518, 3.431, 52.84, 0),
+atom(2.619556125, -3.995625386, 3.016810868, .1489, 2.571, 22.14, 0),
+atom(2.699069859, -0.260846408, 1.745283503, -1.0069, 3.118, 30.19, 0),
+atom(4.68947815, -1.327714562, 3.341125142, -.0518, 3.431, 52.84, 0),
+atom(4.770091151, -0.270789458, 3.016810868, .1489, 2.571, 22.14, 0),
+atom(6.46131528, -5.027904418, 5.734588418, -1.0069, 3.118, 30.19, 0),
+atom(6.629136892, -3.827333969, 5.412667607, 3.431, 52.84, 0),
+atom(5.557533607, -3.208643524, 4.537707188, -0.1378, 3.431, 52.84, 0),
+atom(4.4710902, -3.961142041, 4.138447596, -.0518, 3.431, 52.84, 0),
+atom(4.390477199, -5.018067145, 4.462761869, .1489, 2.571, 22.14, 0),
+atom(7.584950594, -3.081710965, 5.734588418, -1.0069, 3.118, 30.19, 0),
+atom(5.665994736, -1.891506675, 4.138447596, -.0518, 3.431, 52.84, 0),
+atom(6.541012225, -1.293231217, 4.462761869, .1489, 2.571, 22.14, 0),
+atom(1.606763689, 9.650047758, 6.823614208, 1.8529, 2.4616, 62.3993, 0),
+atom(-1.606763689, 9.650047758, 6.823614208, 1.8529, 2.4616, 62.3993, 0),
+atom(-9.16056835, -3.433525707, 6.823614208, 1.8529, 2.4616, 62.3993, 0),
+atom(9.16056835, -3.433525707, 6.823614208, 1.8529, 2.4616, 62.3993, 0),
+atom(7.553804662, -6.216522051, 6.823614208, 1.8529, 2.4616, 62.3993, 0),
+atom(-7.553804662, -6.216522051, 6.823614208, 1.8529, 2.4616, 62.3993, 0),
+atom(0, 0, -1.967875587, 1.8529, 2.4616, 62.3993, 0),
+atom(0, 10.57771321, 7.479572737, -2.2568, 3.118, 30.19, 0),
+atom(2.69925307, 9.019510274, 8.307262256, -1.0069, 3.118, 30.19, 0),
+atom(-2.699069859, 1.558520264, -0.827689519, -1.0069, 3.118, 30.19, 0),
+atom(-0.000183211, -3.116723196, -0.827689519, -1.0069, 3.118, 30.19, 0),
+atom(2.699069859, 10.83855961, 5.734289235, -1.0069, 3.118, 30.19, 0),
+atom(2.69925307, 1.558202932, -0.827689519, -1.0069, 3.118, 30.19, 0)]
 
 #------3-------#
 hydrogensigma = 2.571
-hydrogenepsilon = 0.0000701127
-Ck = 8.9875517923E9
-alpha = 1
+hydrogenepsilon = 22.1398
 
-for changeAtom in MOF5atoms:
-	changeAtom.epsilon *= 315775.3268
-hydrogenepsilon *= 315775.3268
+# For electrostatic potential
+# Coulumb's constant in K-Å/(e-)^2
+Ck = 167101.002
+#Ck = 8.9875517923E9
+# Polarization constant of hydrogen in Å^3
+alpha = 0.675
 
+#for changeAtom in MOF5atoms:
+#	changeAtom.epsilon *= 315775.3268
 
 from atoms_from_cif import AtomsFromCif
 
@@ -64,6 +135,8 @@ class GridInfo:
 		if XDIV == None: XDIV = 1
 		if YDIV == None: YDIV = 1
 		if ZDIV == None: ZDIV = 1
+
+		if axis == None and NDIM == 1: axis = "z"
 
 		if type(NDIM) != int or NDIM>3 or NDIM<1:
 			raise ValueError("Number of diminsions must be in an integer format and be no greater than 3 and no less than 1.")
@@ -131,19 +204,20 @@ class GridInfo:
 		return GridInfo(3, X - SIZE/2.0, X + SIZE/2.0, DIV, 0.0, Y - SIZE/2.0, Y + SIZE/2.0, DIV, 0.0, Z - SIZE/2.0, Z + SIZE/2.0, DIV, 0.0, CifAtoms, AtomSrc, Analytic, UserFunction, Limited, PotentialLimit)
 
 	def hxyz(self):
-		if self.NDIM == 3 or self.NDIM == 2:
+
+		try:
 			hx = (self.XMAX - self.XMIN) / (self.XDIV - 1)
-			hy = (self.YMAX - self.YMIN) / (self.YDIV - 1)
-		else: 
+		except ZeroDivisionError:
 			hx = 0.0
-			hy = 0.0
-#FIX!!!
-		if self.NDIM == 3 or self.NDIM == 1:
-			hz = (self.ZMAX - self.ZMIN) / (self.ZDIV - 1)
-			hx = (self.XMAX - self.XMIN) / (self.XDIV - 1)
+		try:
 			hy = (self.YMAX - self.YMIN) / (self.YDIV - 1)
-		else:
+		except ZeroDivisionError:
+			hy = 0.0
+		try:
+			hz = (self.ZMAX - self.ZMIN) / (self.ZDIV - 1)
+		except ZeroDivisionError:
 			hz = 0.0
+
 
 		if not self.warned:
 			self.warned = True
@@ -264,7 +338,7 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 
 
 	if g.Analytic == False:
-		V = generateLJ(g.atoms(), g)
+		V = generateNumeric(g.atoms(), g)
 			       
 	elif g.Analytic == True:
 		V = generateFromUserFn(g)
@@ -291,7 +365,7 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 	return V
 
 #-------4.3-------#
-def generateLJ(atoms, g):
+def generateNumeric(atoms, g):
 	hx, hy, hz = g.hxyz()
 
 	if g.NDIM == 1:
@@ -423,13 +497,10 @@ def potentialAnalysis(g, V):
 #-------4.6-------#
 		#FIX for axes
 		if g.NDIM == 1:
-			listofcoordinates = list((g.ZMAX-result[0]*hz))
-			#for coord in listofcoordinates:
-			#    min_list.append(coord)
-			print(listofcoordinates)
+			coord = g.ZMAX-result[0]*hz
+			print(coord)
 			#print("The z position of the minimum is", (min_list))
 			minimumpot = np.amin(V)
-		
 		
 			zresult = result[0]
 			try:
@@ -473,7 +544,7 @@ def potentialAnalysis(g, V):
 				delsquared = float("Nan")
 			zsecondderivative = float("Nan")
 		if g.NDIM == 3:
-			listofcoordinates = list((g.XMAX-result[0]*hx, g.YMAX-result[1]*hy, g.ZMAX-result[2]*hz))
+			listofcoordinates = list((g.XMIN+result[0]*hx, g.YMIN+result[1]*hy, g.ZMIN+result[2]*hz))
 			print(listofcoordinates)
 			#for coord in listofcoordinates:
 			#    min_list.append(coord)
@@ -509,8 +580,13 @@ def potentialAnalysis(g, V):
 				delsquared = float("nan")
 
 
+def pointPotential(atoms, x, y, z):
+	# return LJPotential(atoms, x, y, z) + EstaticPotential(atoms, x, y, z)
+	# return EstaticPotential(atoms, x, y, z)
+	return LJPotential(atoms, x, y, z)
+
 # Calculates in hartree then returns kelvins
-def pointPotential(atoms, xval, yval, zval):
+def LJPotential(atoms, xval, yval, zval):
 	LJ = 0
 	for atom in atoms:
 		jointsigma = (atom.sigma + hydrogensigma)/2
@@ -519,9 +595,32 @@ def pointPotential(atoms, xval, yval, zval):
 		LJpointval = 4*jointepsilon*((jointsigma/magnitude)**12-(jointsigma/magnitude)**6)
 		LJ += LJpointval
 
-	# Convert from Eh to K
-	# LJ *= 315775.3268
 	return LJ
+
+def EstaticPotential(atoms, x, y, z):
+	# E is the electric field at the point,
+	# rHat is the unit vector pointing from the atom towards the point,
+	# Rsquared is the square of the distance between the atom and the point,
+	# atom.charge is the partial charge of the atom,
+	# alpha is the polarization constant of the hydrogen molecule, and 
+	# Ck is coloumb's constant.
+	E = (0.0, 0.0, 0.0)
+	for atom in atoms:
+		Rsquared = (x-atom.x)**2+(y-atom.y)**2+(z-atom.z)**2
+		R = np.sqrt(Rsquared)
+		rHat = (x-atom.x, y-atom.y, z-atom.z) / R
+		# print("rHat:", rHat, "R:", R)
+		E += atom.charge * rHat / Rsquared
+
+		# Exclusion radius hack: Potential set to limit if within 1A of atom
+		# if R < 1.0:
+		# 	return 100000000
+
+	# print("E:", E)
+	Ex, Ey, Ez = E
+	return -Ck * alpha/2 * (Ex**2 + Ey**2 + Ez**2)
+
+
 
 
 

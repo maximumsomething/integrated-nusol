@@ -12,15 +12,26 @@ import generate_potential as gp
 
 
 
-def GraphicalGenerate1D(ProjectName, XLEVEL, YLEVEL, ZLEVEL, axis = "x"):
+def GraphicalGenerate1D(ProjectName, XLEVEL, YLEVEL, ZLEVEL, axis):
 	g = gp.GridInfo.load(ProjectName, 3)
 	g.NDIM = 1
+	# if levels are unspecified, use middle of window
+	if XLEVEL == None: XLEVEL = (g.XMIN + g.XMAX) / 2
+	if YLEVEL == None: YLEVEL = (g.YMIN + g.YMAX) / 2
+	if ZLEVEL == None: ZLEVEL = (g.ZMIN + g.ZMAX) / 2
+
+	if type(YLEVEL) != float:
+		raise ValueError("YLEVEL is not in float format.")
+	elif type(XLEVEL) != float:
+		raise ValueError("XLEVEL is not in float format.")
+
 	g.XLEVEL = XLEVEL
 	g.YLEVEL = YLEVEL
 	g.ZLEVEL = ZLEVEL
 	g.axis = axis
 
-	global V, axisgrid
+	print(f"generating along axis {axis}; XLEVEL={XLEVEL} YLEVEL={YLEVEL} ZLEVEL={ZLEVEL}")
+
 	V = gp.generate(ProjectName, g, Overwrite = True, PrintAnalysis = False)
 	#V = V - (np.amin(V))
 	#print(V)
@@ -30,6 +41,8 @@ def GraphicalGenerate1D(ProjectName, XLEVEL, YLEVEL, ZLEVEL, axis = "x"):
 		axisgrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
 	if axis == "z":
 		axisgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
+
+	return V, axisgrid
 
 	
 
@@ -141,12 +154,8 @@ def Graph2D(Type, name, g, ZLEVEL, getSlice):
 Graph2D.handles = []
 
 		
-def PotentialGraphics1D(ProjectName, XLEVEL = 0.0, YLEVEL = 0.0, ZLEVEL = 0.0, axis = None):  
-	if type(YLEVEL) != float:
-		print("YLEVEL is not in float format.")
-	elif type(XLEVEL) != float:
-		print("XLEVEL is not in float format.")
-	else:
-		GraphicalGenerate1D(ProjectName, XLEVEL, YLEVEL, ZLEVEL, axis)
-		plt.plot(axisgrid, V)
-		plt.show()
+def PotentialGraphics1D(ProjectName, XLEVEL = None, YLEVEL = None, ZLEVEL = None, axis = "z"):  
+
+	V, axisgrid = GraphicalGenerate1D(ProjectName, XLEVEL, YLEVEL, ZLEVEL, axis)
+	plt.plot(axisgrid, V)
+	plt.show()
