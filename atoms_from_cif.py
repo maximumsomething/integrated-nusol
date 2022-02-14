@@ -23,6 +23,16 @@ class AtomsFromCif:
 		self.atoms = load_atoms_from_cif(file, radius, BINDING_LABEL, ORIGIN_LABEL, EXCLUDED_SITES)
 
 def load_atoms_from_cif(file, radius=6.0, BINDING_LABEL="D1", ORIGIN_LABEL="O1", EXCLUDED_SITES=["D1", "D2", "D3", "D4", "D5"]):
+	if type(file) != str:
+		raise ValueError("File path must be a string")
+	elif type(radius) != float:
+		raise ValueError("Radius must be floating-point")
+	elif type(BINDING_LABEL) != str or type(ORIGIN_LABEL) != str:
+		raise ValueError("Site labels must be strings")
+	elif type(EXCLUDED_SITES) != list:
+		raise ValueError("EXCLUDED_SITES must be a list of strings")
+
+
 	startTimer("Find nearby atoms")
 
 	structure = gemmi.read_small_structure(file)
@@ -45,21 +55,23 @@ def load_atoms_from_cif(file, radius=6.0, BINDING_LABEL="D1", ORIGIN_LABEL="O1",
 	# print(ns)
 	neighbors = ns.find_site_neighbors(bindingSite, max_dist=radius)
 
+	bindingPos = bindingSite.orth(structure.cell)
+
 	# Search for nearest atom with the origin site's label
 	originSite = None
 	originPos = None
 	for mark in neighbors:
 		site = mark.to_site(structure)
 		if site.label == ORIGIN_LABEL:
-			originSite = site
-			originPos = mark.pos()
-			break
+			if originSite == None or originPos.dist(bindingPos) > mark.pos().dist(bindingPos):
+				originSite = site
+				originPos = mark.pos()
 
 	if originSite == None:
 		raise ValueError(f"Origin site {ORIGIN_LABEL} not found within radius")
 
 	# originPos = originSite.orth(structure.cell)
-	bindingPos = bindingSite.orth(structure.cell)
+	
 
 
 	translationVec = np.array([-originPos.x, -originPos.y, -originPos.z])
@@ -91,6 +103,17 @@ def load_atoms_from_cif(file, radius=6.0, BINDING_LABEL="D1", ORIGIN_LABEL="O1",
 		"O": [3.12, 30.2],
 		"C": [3.43, 52.8],
 		"H": [2.57, 22.1]
+	}
+
+	# Charges for each label in MOF-5
+	chargeTable = {
+		"Zn1": 1.85,
+		"O1": -2.26,
+		"O2": -1.01,
+		"C1": 1.10,
+		"C2": -0.14,
+		"C3": -0.05,
+		"H3": 0.15,
 	}
 
 	# eliminate duplicate atoms, which gemmi might give you due to symmetry
@@ -126,7 +149,9 @@ def load_atoms_from_cif(file, radius=6.0, BINDING_LABEL="D1", ORIGIN_LABEL="O1",
 			LJVals = LJTable[mSite.element.name]
 
 			# Note: the files don't seem to actually have charge
-			atoms.append(atom(pos[0], pos[1], pos[2], charge=mSite.charge, sigma=LJVals[0], epsilon=LJVals[1], mass=mSite.element.weight))
+			# charge = mSite.charge
+			charge = chargeTable[mSite.label]
+			atoms.append(atom(pos[0], pos[1], pos[2], charge=charge, sigma=LJVals[0], epsilon=LJVals[1], mass=mSite.element.weight))
 
 	endTimer()
 	return atoms
