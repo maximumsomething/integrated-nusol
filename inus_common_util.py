@@ -64,6 +64,10 @@ class Filenames:
 		os.makedirs("Eigenvectors_array", exist_ok=True)
 		return os.path.join("Eigenvectors_array", "%s%sD_vecarray.npy" %(ProjectName, NDIM)) 
 
+	def potentialAnalysis(ProjectName, NDIM):
+		os.makedirs("potential_analysis", exist_ok=True)
+		return os.path.join("potential_analysis", "%s%sD_analysis.txt" %(ProjectName, NDIM))
+
 	
 
 

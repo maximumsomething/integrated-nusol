@@ -330,9 +330,11 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 	if PrintAnalysis:
 		PotentialArrayPath = Filenames.potarray(ProjectName, g.NDIM)
 		GenerateInfofile = Filenames.generateinfo(ProjectName, g.NDIM)
+		PotentialAnalysisPath = Filenames.potentialAnalysis(ProjectName, g.NDIM)
 
 		checkSuccess = checkFileWriteable(PotentialArrayPath, "Potential Array", Overwrite)
 		checkSuccess &= checkFileWriteable(GenerateInfofile, "Generate Info", Overwrite)
+		checkSuccess &= checkFileWriteable(PotentialAnalysisPath, "Potential Analysis", Overwrite)
 
 		if not checkSuccess:
 			sys.exit()
@@ -361,7 +363,8 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 	#print(V)
 	
 	if PrintAnalysis == True:
-		potentialAnalysis(g, V)
+		potAnalFile = open(PotentialAnalysisPath, "w")
+		potentialAnalysis(g, potAnalFile, V)
 
 	#-------4.7-------#
 		
@@ -446,13 +449,14 @@ def smoothPot(V, NDIM):
 
 
 
-def potentialAnalysis(g, V):
+def potentialAnalysis(g, file, V):
 	hx, hy, hz = g.hxyz()
+
 
 	if not np.isnan(np.sum(V)) and not np.isinf(np.sum(V)):
 		# Should we also be doing analysis if there are nans?
 
-		print("Maximum potential:", np.amax(V), "\nMinimum potential:", np.amin(V), "\nMinimum potential's array position", np.unravel_index(np.argmin(V, axis=None), V.shape))
+		doubleprint(file, "Maximum potential:", np.amax(V), "\nMinimum potential:", np.amin(V), "\nMinimum potential's array position", np.unravel_index(np.argmin(V, axis=None), V.shape))
 	
 		#result = (np.where(V == np.amin(V)))
 		result = np.unravel_index(np.argmin(V), np.shape(V))
@@ -461,16 +465,16 @@ def potentialAnalysis(g, V):
 		#FIX for axes
 		if g.NDIM == 1:
 			coord = g.ZMAX-result[0]*hz
-			print(coord)
-			#print("The z position of the minimum is", (min_list))
+			doubleprint(file, coord)
+			#doubleprint(file, "The z position of the minimum is", (min_list))
 			minimumpot = np.amin(V)
 		
 			zresult = result[0]
 			try:
 				zsecondderivative = ((V[zresult+1] - 2*minimumpot + V[zresult-1])/(hz**2))
-				print("The second partial derivative with respect to z is", zsecondderivative)
+				doubleprint(file, "The second partial derivative with respect to z is", zsecondderivative)
 			except:
-				print("Undefined second partial derivative with respect to z.")
+				doubleprint(file, "Undefined second partial derivative with respect to z.")
 				zsecondderivative = float("Nan")
 			ysecondderivative = float("Nan")
 			xsecondderivative = float("Nan")
@@ -480,7 +484,7 @@ def potentialAnalysis(g, V):
 			#for coord in listofcoordinates:
 			#    min_list.append(coord)
 
-			#print("The x,y position of the minimum is", (min_list))
+			#doubleprint(file, "The x,y position of the minimum is", (min_list))
 
 			minimumpot = np.amin(V)
 
@@ -489,58 +493,64 @@ def potentialAnalysis(g, V):
 
 			try:
 				xsecondderivative = ((V[xresult+1, yresult] - 2*minimumpot + V[xresult-1, yresult])/(hx**2))
-				print("The second partial derivative with respect to x is", xsecondderivative)
+				doubleprint(file, "The second partial derivative with respect to x is", xsecondderivative)
 			except:
-				print("Undefined second partial derivative with respect to x.")
+				doubleprint(file, "Undefined second partial derivative with respect to x.")
 				xsecondderivative = float("Nan")
 			try:
 				ysecondderivative = ((V[xresult, yresult+1] - 2*minimumpot + V[xresult, yresult-1])/(hy**2))
-				print("The second partial derivative with respect to y is", ysecondderivative)
+				doubleprint(file, "The second partial derivative with respect to y is", ysecondderivative)
 			except:
-				print("Undefined second partial derivative with respect to y.")
+				doubleprint(file, "Undefined second partial derivative with respect to y.")
 				ysecondderivative = float("Nan")
 			try: 
-				print("Del Squared is", xsecondderivative+ysecondderivative)
+				doubleprint(file, "Del Squared is", xsecondderivative+ysecondderivative)
 				delsquared = xsecondderivative+ysecondderivative
 			except:
-				print("Del Squared is undefined.")
+				doubleprint(file, "Del Squared is undefined.")
 				delsquared = float("Nan")
 			zsecondderivative = float("Nan")
 		if g.NDIM == 3:
 			listofcoordinates = list((g.XMIN+result[0]*hx, g.YMIN+result[1]*hy, g.ZMIN+result[2]*hz))
-			print(listofcoordinates)
+			doubleprint(file, listofcoordinates)
 			#for coord in listofcoordinates:
 			#    min_list.append(coord)
-			#print("The x,y,z position of the minimum is", (min_list))
+			#doubleprint(file, "The x,y,z position of the minimum is", (min_list))
 			minimumpot = np.amin(V)
 			xresult = result[0]
 			yresult = result[1]
 			zresult = result[2]
-			print(xresult, yresult, zresult)
+			doubleprint(file, xresult, yresult, zresult)
 			try:
 				xsecondderivative = ((V[xresult+1, yresult, zresult] - 2*minimumpot + V[xresult-1, yresult, zresult])/(hx**2))
-				print("The second partial derivative with respect to x is", xsecondderivative)
+				doubleprint(file, "The second partial derivative with respect to x is", xsecondderivative)
 			except:
-				print("Undefined second partial derivative with respect to x.")
+				doubleprint(file, "Undefined second partial derivative with respect to x.")
 				xsecondderivative = float("nan")
 			try:
 				ysecondderivative = ((V[xresult, yresult+1, zresult] - 2*minimumpot + V[xresult, yresult-1, zresult])/(hy**2))
-				print("The second partial derivative with respect to y is", ysecondderivative)
+				doubleprint(file, "The second partial derivative with respect to y is", ysecondderivative)
 			except:
-				print("Undefined second partial derivative with respect to y.")
+				doubleprint(file, "Undefined second partial derivative with respect to y.")
 				ysecondderivative = float("nan")
 			try:
 				zsecondderivative = ((V[xresult, yresult, zresult+1] - 2*minimumpot + V[xresult, yresult, zresult-1])/(hz**2))
-				print("The second partial derivative with respect to z is", zsecondderivative)
+				doubleprint(file, "The second partial derivative with respect to z is", zsecondderivative)
 			except:
-				print("Undefined second partial derivative with respect to z.")
+				doubleprint(file, "Undefined second partial derivative with respect to z.")
 				zsecondderivative = float("nan")
 			try: 
-				print("Del Squared is", xsecondderivative+ysecondderivative+zsecondderivative)
+				doubleprint(file, "Del Squared is", xsecondderivative+ysecondderivative+zsecondderivative)
 				delsquared = xsecondderivative+ysecondderivative+zsecondderivative
 			except:
-				print("Del Squared is undefined.")
+				doubleprint(file, "Del Squared is undefined.")
 				delsquared = float("nan")
+
+
+def doubleprint(file, *args, **kwargs):
+	print(*args, **kwargs)
+	print(*args, **kwargs, file=file)
+
 
 
 def pointPotential(atoms, Estatic, x, y, z):
