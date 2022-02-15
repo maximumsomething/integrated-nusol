@@ -283,7 +283,7 @@ class GridInfo:
 				AtomSrc = AtomsFromCif(v['AtomSrcFile'], v['AtomSrcRadius'], v['BINDING_LABEL'], v['ORIGIN_LABEL'], v['EXCLUDED_SITES'])
 			else: AtomSrc = None
 
-			gridInfo = GridInfo(v['NDIM'], v['XMIN'], v['XMAX'], v['XDIV'], v['XLEVEL'], v['YMIN'], v['YMAX'], v['YDIV'], v['YLEVEL'], v['ZMIN'], v['ZMAX'], v['ZDIV'], v['ZLEVEL'], v['Estatic'], v['CifAtoms'], AtomSrc, v['Analytic'], v['UserFunction'])
+			gridInfo = GridInfo(v['NDIM'], v['XMIN'], v['XMAX'], v['XDIV'], v['XLEVEL'], v['YMIN'], v['YMAX'], v['YDIV'], v['YLEVEL'], v['ZMIN'], v['ZMAX'], v['ZDIV'], v['ZLEVEL'], v['Estatic'], v['CifAtoms'], AtomSrc, v['Analytic'], v['UserFunction'], v['Limited'], v['PotentialLimit'], v['Axis'])
 			gridInfo.loadedFromFile = path
 			return gridInfo
 		except IOError:
