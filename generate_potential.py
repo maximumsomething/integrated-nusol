@@ -244,11 +244,8 @@ class GridInfo:
 			print(f"AtomSrcFile={self.AtomSrc.file}\nAtomSrcRadius={self.AtomSrc.radius}\nBINDING_LABEL={self.AtomSrc.BINDING_LABEL}\nORIGIN_LABEL={self.AtomSrc.ORIGIN_LABEL}\nEXCLUDED_SITES={self.AtomSrc.EXCLUDED_SITES}", file=file)
 
 
-	def getFilename(ProjectName, NDIM):
-		return "generateinfo%s%sD.dat" %(ProjectName, NDIM)
-
 	def save(self, ProjectName):
-		filename = GridInfo.getFilename(ProjectName, self.NDIM)
+		filename = Filenames.generateinfo(ProjectName, self.NDIM)
 		if filename != self.loadedFromFile: # Don't overwrite file that we loaded from
 			try:
 				f = open(filename, 'w')
@@ -258,7 +255,7 @@ class GridInfo:
 				print("WARNING: The potential file", filename, "did not save. The file you wanted to save to was already opened.")
 
 	def load(ProjectName, NDIM):
-		return GridInfo.loadFromFile(GridInfo.getFilename(ProjectName, NDIM))
+		return GridInfo.loadFromFile(Filenames.generateinfo(ProjectName, NDIM))
 	
 	"""
 	File format:
@@ -331,8 +328,8 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 	startTimer("generate")
 
 	if PrintAnalysis:
-		PotentialArrayPath = "Potential%s%sD.npy" %(ProjectName, g.NDIM)
-		GenerateInfofile = "generateinfo%s%sD.dat" %(ProjectName, g.NDIM)
+		PotentialArrayPath = Filenames.potarray(ProjectName, g.NDIM)
+		GenerateInfofile = Filenames.generateinfo(ProjectName, g.NDIM)
 
 		checkSuccess = checkFileWriteable(PotentialArrayPath, "Potential Array", Overwrite)
 		checkSuccess &= checkFileWriteable(GenerateInfofile, "Generate Info", Overwrite)

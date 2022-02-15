@@ -49,11 +49,11 @@ def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=2.0, HBAR =
 
 
 #-------5.2-------# 
-	PotentialArrayPath = "Potential%s%sD.npy" %(ProjectName, g.NDIM)
-	GenerateInfofile = "generateinfo%s%sD.dat" %(ProjectName, g.NDIM)
-	EIGENVALUES_OUT = "valout%s%sD.dat" %(ProjectName, g.NDIM)
-	EIGENVECTORS_OUT = "vecoutFlat%s%sD.dat" %(ProjectName, g.NDIM)
-	EigenvectorArray = "vecarray%s%sD.npy" %(ProjectName, g.NDIM)
+	PotentialArrayPath = Filenames.potarray(ProjectName, g.NDIM)
+	GenerateInfofile = Filenames.generateinfo(ProjectName, g.NDIM)
+	EIGENVALUES_OUT = Filenames.valout(ProjectName, g.NDIM)
+	EIGENVECTORS_OUT = Filenames.vecout(ProjectName, g.NDIM)
+	EigenvectorArray = Filenames.vecarray(ProjectName, g.NDIM)
 
 
 	checkSuccess = checkFileWriteable(EIGENVALUES_OUT, "eigenvalue out", Overwrite)

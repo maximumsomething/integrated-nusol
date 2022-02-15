@@ -89,9 +89,9 @@ def PotentialGraph2D(Type, ProjectName, ZLEVEL):
 
 def PsiGraph2D(Type, ProjectName, ZLEVEL, EVAL_NUM=0):
 	g = gp.GridInfo.load(ProjectName, 3)
-	evec = np.load("vecarray%s%sD.npy" %(ProjectName, g.NDIM))[EVAL_NUM]
+	evec = np.load(Filenames.vecarray(ProjectName, g.NDIM))[EVAL_NUM]
 
-	valFile = open("valout%s%sD.dat" %(ProjectName, g.NDIM))
+	valFile = open(Filenames.valout(ProjectName, g.NDIM))
 	lines = valFile.readlines()
 
 	name = f"Psi for {ProjectName}, Eval {EVAL_NUM} which is {lines[EVAL_NUM]}"
@@ -168,17 +168,17 @@ def Graph2D(Type, name, g, ZLEVEL, getSlice):
 
 
 def PotentialVoxel3D(ProjectName, level=0.0, minlev=None, maxlev=None):
-	V = np.load("Potential%s3D.npy" % (ProjectName))
+	V = np.load(Filenames.potarray(ProjectName))
 	title = f"Potential for {ProjectName}"
 	Voxel3D(ProjectName, title, V, level, minlev, maxlev)
 
 
 def PsiVoxel3D(ProjectName, EVAL_NUM=0, level=None, minlev=None, maxlev=None):
-	evec = np.load("vecarray%s%sD.npy" %(ProjectName, 3))[EVAL_NUM]
+	evec = np.load(Filenames.vecarray(ProjectName, 3))[EVAL_NUM]
 
 	evec = np.square(evec)
 
-	valFile = open("valout%s%sD.dat" %(ProjectName, 3))
+	valFile = open(Filenames.valout(ProjectName, 3))
 	lines = valFile.readlines()
 
 	title = f"Psi^2 for {ProjectName}, Eval {EVAL_NUM} which is {lines[EVAL_NUM]}"
@@ -255,7 +255,7 @@ def PotentialGraphics1D(ProjectName, XLEVEL = None, YLEVEL = None, ZLEVEL = None
 
 def PsiGraphics1D(ProjectName, XLEVEL = None, YLEVEL = None, ZLEVEL = None, axis = "z", EVAL_NUM=0):
 	g = gp.GridInfo.load(ProjectName, 3)
-	evec = np.load("vecarray%s%sD.npy" %(ProjectName, g.NDIM))[EVAL_NUM]
+	evec = np.load(Filenames.vecarray(ProjectName, g.NDIM))[EVAL_NUM]
 
 	hx, hy, hz = g.hxyz()
 	divx = round((XLEVEL - g.XMIN) / hx)

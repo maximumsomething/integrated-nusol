@@ -41,3 +41,25 @@ def checkFileReadable(path, description):
 		return False
 	else:
 		return True
+
+class Filenames:
+	def generateinfo(ProjectName, NDIM):
+		return "generateinfo%s%sD.dat" %(ProjectName, NDIM)
+	def potarray(ProjectName, NDIM):
+
+		return "Potential%s%sD.npy" %(ProjectName, NDIM)
+		
+	def valout(ProjectName, NDIM):
+		return "valout%s%sD.npy" %(ProjectName, NDIM)
+
+	def vecout(ProjectName, NDIM):
+		return "vecoutFlat%s%sD.dat" %(ProjectName, NDIM)
+
+	def vecarray(ProjectName, NDIM):
+		return "vecarray%s%sD.npy" %(ProjectName, NDIM)
+
+	
+
+
+
+
