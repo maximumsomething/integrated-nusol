@@ -343,6 +343,12 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 	elif g.Analytic == True:
 		V = generateFromUserFn(g)
 
+	# The above return 3D arrays. Now remove extra dimensions
+	if g.NDIM == 1:
+		V = np.reshape(V, V.size)
+	if g.NDIM == 2:
+		V = V[:, :, 0]
+
 	if g.Limited:
 		# V = smoothPot(chopPot(V, g.PotentialLimit), g.NDIM)
 		# V = smoothChop(V, g.PotentialLimit)
@@ -378,7 +384,7 @@ def generateFromUserFn(g):
 
 	try:
 		V = np.array(eval(g.UserFunction))
-		print(V)
+		# print(V)
 	except NameError:
 		raise ValueError("Invalid function. Make sure your function is a function of x, y, and z and that all non-elementary operations are proceded by 'np.'")
 		sys.exit()
@@ -389,33 +395,29 @@ def generateFromUserFn(g):
 def meshgrids(g):
 	if g.NDIM == 1 and g.axis == "z":
 		Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)	
-		z = Zgrid
-		x = g.XLEVEL
-		y = g.YLEVEL
+		Xgrid = g.XLEVEL
+		Ygrid = g.YLEVEL
 	if g.NDIM == 1 and g.axis == "x":
 		Xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
-		x = Xgrid
-		z = g.ZLEVEL
-		y = g.YLEVEL
+		Zgrid = g.ZLEVEL
+		Ygrid = g.YLEVEL
 
 	if g.NDIM == 1 and g.axis == "y":
 		Ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
-		y = Ygrid
-		x = g.XLEVEL
-		z = g.ZLEVEL
+		Xgrid = g.XLEVEL
+		Zgrid = g.ZLEVEL
 
 	if g.NDIM == 2:
 		Xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
 		Ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
-		x, y = np.meshgrid(Xgrid, Ygrid)
-		z = g.ZLEVEL
+		Zgrid = g.ZLEVEL
 	
 	if g.NDIM == 3:
 		Xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
 		Ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
 		Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
-		x,y,z = np.meshgrid(Xgrid, Ygrid, Zgrid)
 
+	x,y,z = np.meshgrid(Xgrid, Ygrid, Zgrid)
 	return (x, y, z)
 
 
@@ -547,9 +549,9 @@ def potentialAnalysis(g, V):
 
 def pointPotential(atoms, x, y, z):
 	V = LJPotential(atoms, x, y, z) + EstaticPotential(atoms, x, y, z)
+	# V = EstaticPotential(atoms, x, y, z)
+	# V = LJPotential(atoms, x, y, z)
 	return excludeAtoms(V, atoms, x, y, z)
-	# return EstaticPotential(atoms, x, y, z)
-	# return LJPotential(atoms, x, y, z)
 
 # Calculates in hartree then returns kelvins
 def LJPotential(atoms, xval, yval, zval):
@@ -570,13 +572,14 @@ def EstaticPotential(atoms, x, y, z):
 	# atom.charge is the partial charge of the atom,
 	# alpha is the polarization constant of the hydrogen molecule, and 
 	# Ck is coloumb's constant.
-	#E = (0.0, 0.0, 0.0)
 
-	if type(x) == np.ndarray:
+	if type(x) == np.ndarray or type(y) == np.ndarray or type(z) == np.ndarray:
 		assert(x.shape == y.shape and x.shape == z.shape)
+
 		E = (np.zeros(x.shape), np.zeros(x.shape), np.zeros(x.shape))
 	else:
 		E = (0.0, 0.0, 0.0)
+
 
 	for atom in atoms:
 		Rsquared = (x-atom.x)**2+(y-atom.y)**2+(z-atom.z)**2
