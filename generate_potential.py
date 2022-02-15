@@ -201,11 +201,11 @@ class GridInfo:
 		self.loadedFromFile = None
 		self.warned = False
 
-	def WindowAround3DPoint(SIZE, X=0.0, Y=0.0, Z=0.0, DIV=25, CifAtoms=False, AtomSrc=None, Analytic=False, UserFunction="", Limited = True, PotentialLimit = 10000.0):
+	def WindowAround3DPoint(SIZE, X=0.0, Y=0.0, Z=0.0, DIV=25, Estatic=True, CifAtoms=False, AtomSrc=None, Analytic=False, UserFunction="", Limited = True, PotentialLimit = 10000.0):
 		if type(SIZE) != float:
 			raise ValueError("SIZE must be floating-point.")
 
-		return GridInfo(3, X - SIZE/2.0, X + SIZE/2.0, DIV, 0.0, Y - SIZE/2.0, Y + SIZE/2.0, DIV, 0.0, Z - SIZE/2.0, Z + SIZE/2.0, DIV, 0.0, CifAtoms, AtomSrc, Analytic, UserFunction, Limited, PotentialLimit)
+		return GridInfo(3, X - SIZE/2.0, X + SIZE/2.0, DIV, 0.0, Y - SIZE/2.0, Y + SIZE/2.0, DIV, 0.0, Z - SIZE/2.0, Z + SIZE/2.0, DIV, 0.0, Estatic, CifAtoms, AtomSrc, Analytic, UserFunction, Limited, PotentialLimit)
 
 	def hxyz(self):
 
