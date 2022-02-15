@@ -251,3 +251,33 @@ def PotentialGraphics1D(ProjectName, XLEVEL = None, YLEVEL = None, ZLEVEL = None
 	V, axisgrid = GraphicalGenerate1D(ProjectName, XLEVEL, YLEVEL, ZLEVEL, axis)
 	plt.plot(axisgrid, V)
 	plt.show()
+
+
+def PsiGraphics1D(ProjectName, XLEVEL = None, YLEVEL = None, ZLEVEL = None, axis = "z", EVAL_NUM=0):
+	g = gp.GridInfo.load(ProjectName, 3)
+	evec = np.load("vecarray%s%sD.npy" %(ProjectName, g.NDIM))[EVAL_NUM]
+
+	hx, hy, hz = g.hxyz()
+	divx = round((XLEVEL - g.XMIN) / hx)
+	divy = round((YLEVEL - g.YMIN) / hy)
+	divz = round((ZLEVEL - g.ZMIN) / hz)
+
+	if axis == "x":
+		slice = evec[:, divy, divz]
+		axisgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
+	elif axis == "y":
+		slice = evec[divx, :, divz]
+		axisgrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
+	elif axis == "z":
+		slice = evec[divx, divy, :]
+		axisgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
+	else:
+		raise ValueError("Axis must be x, y, or z")
+
+	plt.plot(axisgrid, slice)
+	plt.show()
+
+
+
+
+
