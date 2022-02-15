@@ -129,7 +129,7 @@ from atoms_from_cif import AtomsFromCif
 
 class GridInfo:
 
-	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, CifAtoms=False, AtomSrc=None, Analytic = False, UserFunction = "", Limited = True, PotentialLimit = 10000, axis = None):
+	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, Estatic=True, CifAtoms=False, AtomSrc=None, Analytic = False, UserFunction = "", Limited = True, PotentialLimit = 10000, axis = None):
 
 		# We need to check here because the load function might give None instead of letting it default
 		if XDIV == None: XDIV = 1
@@ -167,6 +167,7 @@ class GridInfo:
 		self.ZMAX = ZMAX
 		self.ZLEVEL = ZLEVEL
 		self.ZDIV = ZDIV
+		self.Estatic = Estatic
 		self.CifAtoms = CifAtoms
 		self.AtomSrc = AtomSrc
 		self.Analytic = Analytic
@@ -193,6 +194,9 @@ class GridInfo:
 		if NDIM == 2:
 			self.ZMIN = ZLEVEL
 			self.ZMAX = ZLEVEL
+
+		if Estatic and not CifAtoms:
+			print("WARNING: Estatic potential gives bad results with sample MOF5atoms")
 
 		self.loadedFromFile = None
 		self.warned = False
@@ -234,7 +238,7 @@ class GridInfo:
 		else: return MOF5atoms
 
 	def saveToFile(self, ProjectName, file):
-		print("ProjectName=%s\nNDIM=%d\nXMIN=%.8f\nXMAX=%.8f\nXDIV=%d\nXLEVEL=%.8f\nYMIN=%.8f\nYMAX=%.8f\nYDIV=%d\nYLEVEL=%.8f\nZMIN=%.8f\nZMAX=%.8f\nZDIV=%d\nZLEVEL=%.8f\nCifAtoms=%s\nAnalytic=%s\nUserFunction=%s\n Limited=%s\n PotentialLimit=%d\n Axis=%s\n" % (ProjectName, self.NDIM, self.XMIN, self.XMAX, self.XDIV, self.XLEVEL, self.YMIN, self.YMAX, self.YDIV, self.YLEVEL, self.ZMIN, self.ZMAX, self.ZDIV, self.ZLEVEL, self.CifAtoms, self.Analytic, self.UserFunction, self.Limited, self.PotentialLimit, self.axis), file=file)
+		print("ProjectName=%s\nNDIM=%d\nXMIN=%.8f\nXMAX=%.8f\nXDIV=%d\nXLEVEL=%.8f\nYMIN=%.8f\nYMAX=%.8f\nYDIV=%d\nYLEVEL=%.8f\nZMIN=%.8f\nZMAX=%.8f\nZDIV=%d\nZLEVEL=%.8f\nEstatic=%s\nCifAtoms=%s\nAnalytic=%s\nUserFunction=%s\n Limited=%s\n PotentialLimit=%d\n Axis=%s\n" % (ProjectName, self.NDIM, self.XMIN, self.XMAX, self.XDIV, self.XLEVEL, self.YMIN, self.YMAX, self.YDIV, self.YLEVEL, self.ZMIN, self.ZMAX, self.ZDIV, self.ZLEVEL, self.Estatic, self.CifAtoms, self.Analytic, self.UserFunction, self.Limited, self.PotentialLimit, self.axis), file=file)
 
 		if self.CifAtoms:
 			print(f"AtomSrcFile={self.AtomSrc.file}\nAtomSrcRadius={self.AtomSrc.radius}\nBINDING_LABEL={self.AtomSrc.BINDING_LABEL}\nORIGIN_LABEL={self.AtomSrc.ORIGIN_LABEL}\nEXCLUDED_SITES={self.AtomSrc.EXCLUDED_SITES}", file=file)
@@ -282,7 +286,7 @@ class GridInfo:
 				AtomSrc = AtomsFromCif(v['AtomSrcFile'], v['AtomSrcRadius'], v['BINDING_LABEL'], v['ORIGIN_LABEL'], v['EXCLUDED_SITES'])
 			else: AtomSrc = None
 
-			gridInfo = GridInfo(v['NDIM'], v['XMIN'], v['XMAX'], v['XDIV'], v['XLEVEL'], v['YMIN'], v['YMAX'], v['YDIV'], v['YLEVEL'], v['ZMIN'], v['ZMAX'], v['ZDIV'], v['ZLEVEL'], v['CifAtoms'], AtomSrc, v['Analytic'], v['UserFunction'])
+			gridInfo = GridInfo(v['NDIM'], v['XMIN'], v['XMAX'], v['XDIV'], v['XLEVEL'], v['YMIN'], v['YMAX'], v['YDIV'], v['YLEVEL'], v['ZMIN'], v['ZMAX'], v['ZDIV'], v['ZLEVEL'], v['Estatic'], v['CifAtoms'], AtomSrc, v['Analytic'], v['UserFunction'])
 			gridInfo.loadedFromFile = path
 			return gridInfo
 		except IOError:
@@ -338,7 +342,8 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 
 
 	if g.Analytic == False:
-		V = generateNumeric(g.atoms(), g)
+		x, y, z = meshgrids(g)
+		V = pointPotential(g.atoms(), g.Estatic, x, y, z)
 			       
 	elif g.Analytic == True:
 		V = generateFromUserFn(g)
@@ -368,13 +373,7 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 		
 		g.save(ProjectName)
 	
-	return V
-
-
-def generateNumeric(atoms, g):
-	x, y, z = meshgrids(g)
-	
-	return pointPotential(atoms, x, y, z)
+	return V	
 	
 
 #-------4.4-------#  
@@ -547,10 +546,10 @@ def potentialAnalysis(g, V):
 				delsquared = float("nan")
 
 
-def pointPotential(atoms, x, y, z):
-	V = LJPotential(atoms, x, y, z) + EstaticPotential(atoms, x, y, z)
-	# V = EstaticPotential(atoms, x, y, z)
-	# V = LJPotential(atoms, x, y, z)
+def pointPotential(atoms, Estatic, x, y, z):
+	V = LJPotential(atoms, x, y, z)
+	if Estatic:
+		V += EstaticPotential(atoms, x, y, z)
 	return excludeAtoms(V, atoms, x, y, z)
 
 # Calculates in hartree then returns kelvins
