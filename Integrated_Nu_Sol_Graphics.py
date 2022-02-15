@@ -16,6 +16,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 np.set_printoptions(threshold=sys.maxsize)
 
 import generate_potential as gp
+from inus_common_util import *
 
 
 
@@ -168,7 +169,7 @@ def Graph2D(Type, name, g, ZLEVEL, getSlice):
 
 
 def PotentialVoxel3D(ProjectName, level=0.0, minlev=None, maxlev=None):
-	V = np.load(Filenames.potarray(ProjectName))
+	V = np.load(Filenames.potarray(ProjectName, 3))
 	title = f"Potential for {ProjectName}"
 	Voxel3D(ProjectName, title, V, level, minlev, maxlev)
 

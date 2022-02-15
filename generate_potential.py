@@ -195,7 +195,7 @@ class GridInfo:
 			self.ZMIN = ZLEVEL
 			self.ZMAX = ZLEVEL
 
-		if Estatic and not CifAtoms:
+		if Estatic and (not Analytic) and (not CifAtoms):
 			print("WARNING: Estatic potential gives bad results with sample MOF5atoms")
 
 		self.loadedFromFile = None
