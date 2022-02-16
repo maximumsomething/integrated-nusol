@@ -50,7 +50,7 @@ def GraphicalGenerate1D(ProjectName, XLEVEL, YLEVEL, ZLEVEL, axis):
 	if axis == "z":
 		axisgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
 
-	return V, axisgrid
+	return V, axisgrid, g
 
 
 # Need to keep global reference to graphs, because pyplot is stupid
@@ -249,9 +249,8 @@ def Voxel3D(ProjectName, graphTitle, arr, level=None, minlev=None, maxlev=None):
 		
 def PotentialGraphics1D(ProjectName, XLEVEL = None, YLEVEL = None, ZLEVEL = None, axis = "z"):  
 
-	V, axisgrid = GraphicalGenerate1D(ProjectName, XLEVEL, YLEVEL, ZLEVEL, axis)
+	V, axisgrid, _ = GraphicalGenerate1D(ProjectName, XLEVEL, YLEVEL, ZLEVEL, axis)
 	plt.plot(axisgrid, V)
-	plt.show()
 
 
 def PsiGraphics1D(ProjectName, XLEVEL = None, YLEVEL = None, ZLEVEL = None, axis = "z", EVAL_NUM=0):
@@ -277,6 +276,22 @@ def PsiGraphics1D(ProjectName, XLEVEL = None, YLEVEL = None, ZLEVEL = None, axis
 
 	plt.plot(axisgrid, slice)
 	plt.show()
+
+
+def Potential2ndDerGraph1D(ProjectName, XLEVEL = None, YLEVEL = None, ZLEVEL = None, axis = "z"):
+	V, axisgrid, g = GraphicalGenerate1D(ProjectName, XLEVEL, YLEVEL, ZLEVEL, axis)
+
+	hx, hy, hz = g.hxyz()
+
+	if axis == "x": space = hx
+	if axis == "y": space = hy
+	if axis == "z": space = hz
+
+
+	der = (V[0:-2] - 2*V[1:-1] + V[2:]) / space ** 2
+	dergrid = axisgrid[1:-1]
+
+	plt.plot(dergrid, der)
 
 
 

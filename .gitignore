@@ -9,3 +9,10 @@ venv/
 FEAST_MATRIX
 *.csv
 .DS_Store
+
+potential_analysis/
+Eigenvectors_array/
+Eigenevectors_flat/
+Eigenvalues_out/
+generate_info/
+Potential_array/
