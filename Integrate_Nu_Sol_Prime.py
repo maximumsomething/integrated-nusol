@@ -21,7 +21,7 @@ USE_FEAST=False
 
 
 
-# HBAR in terms of ((J^2*s^2)(K/J)(m_u/Kg)(A/m)^2)^ 1/2
+# HBAR in terms of ((J^2*s^2)(K/J)(m_u/Kg)(A/)^2)^ 1/2
 # = (hbar)^2 / Kb / m_u * 10^20x`
 # where hbar is planck's constant in joule-seconds, Kb is Boltzmann's constant, m_u is atomic mass in kilograms, and 10^20 is square angstroms per square meter.
 
@@ -422,20 +422,33 @@ def createNumerovMatrices3D(V, XDIV, YDIV, ZDIV, hx, MASS, HBAR):
 	XDIV * YDIV * ZDIV, XDIV * YDIV * ZDIV))
 	M = sp.csr_matrix((dataM, (row, col)), shape=(
 	XDIV * YDIV * ZDIV, ZDIV * YDIV * ZDIV))
-	return (A, M)
-
+	
+	# BigA = A[:16383, 0:16383]
+	# BigB = A[:16383, 16384:32767]
+	# BigB = np.flip(BigB, 1)
+	# add = BigA+BigB
+	# sub = BigA-BigB
+	# #return (add, sub)
+	# eval, evec = sp.linalg.eigs(A=add, k=10, which='SR')
+	# eval /= 12
+	# print(eval)
+	# eval, evec = sp.linalg.eigs(A=sub, k=10, which='SR')
+	# eval /=12
+	# print(eval)
+	return(A, M)
 #-------5.10-------# 
 
 def solveEigsApprox(A, N_EVAL):
 	# Using shift-invert mode was tested and did not lead to faster results
 	# The eigsh function seemed to lead to nonsense
-	eval, evec = sp.linalg.eigs(A=A, k=N_EVAL, which='SR')
 	#A = A.astype(complex)
 	#print("done complex")
 	#A = A.power(1/3)
 	#print("done power")
 	#A = A.real
-	print("done real")
+	#print("done real")
+	eval, evec = sp.linalg.eigs(A=A, k=N_EVAL, which='SR')
+
 	eval /= 12
 	return eval, evec
 
