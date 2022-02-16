@@ -20,6 +20,12 @@ from inus_common_util import *
 
 
 
+#Integrated_Nu_Sol_Graphics has all the code for creating visualizations of what is going within the MOF. The code has the ability to provide graphs of 1D levels of the Potential and Eigenvectors along any specified axis
+#as well as graphics for the Potential and Eigenvectors in the x-y plane with an adjustable Z-Level slider. 
+#The code also has the ability to generate 2D level curves or "voxels"
+#Finally, the code can also generate second derivative graphs for the potential's minimum to help with window sizing and spacing.
+
+#A function to load the GridInfo for a specific ProjectName as well as generate a 1D potential along a specified axis at a specific 2D Level. 
 def GraphicalGenerate1D(ProjectName, XLEVEL, YLEVEL, ZLEVEL, axis):
 	g = gp.GridInfo.load(ProjectName, 3)
 	g.NDIM = 1
@@ -41,8 +47,11 @@ def GraphicalGenerate1D(ProjectName, XLEVEL, YLEVEL, ZLEVEL, axis):
 	print(f"generating along axis {axis}; XLEVEL={XLEVEL} YLEVEL={YLEVEL} ZLEVEL={ZLEVEL}")
 
 	V = gp.generate(ProjectName, g, Overwrite = True, PrintAnalysis = False)
+
+
 	#V = V - (np.amin(V))
-	#print(V)
+
+	#depending on the axis specified generate the grid based on GridInfo 
 	if axis == "x":
 		axisgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
 	if axis == "y":
@@ -58,18 +67,7 @@ graphHandles = []
 
 	
 
-#def ZGraphicalGenerate(ProjectName, XLEVEL, YLEVEL):
-#	g = gp.GridInfo.load(ProjectName, 3)
-#	g.NDIM = 1
-#	g.XLEVEL = XLEVEL
-#	g.YLEVEL = YLEVEL
-
-#	global V, zgrid
-#	V = gp.generate(ProjectName, g, Overwrite = True, PrintAnalysis = False)
-#	V = V - (np.amin(V))
-#	zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
-
-
+#A function to graph the potential in the x-y plane at a specified Z-Level.
 # type is "contour", "heat", or "surface"
 def PotentialGraph2D(Type, ProjectName, ZLEVEL):
 
@@ -80,6 +78,7 @@ def PotentialGraph2D(Type, ProjectName, ZLEVEL):
 
 	name = f"Potential for {ProjectName}"
 
+	#Function to regenerate the potential when the slider is moved to a new Z-Level.
 	def getV(newZ):
 		print("Generating for", newZ)
 		g.ZLEVEL = newZ
@@ -87,16 +86,19 @@ def PotentialGraph2D(Type, ProjectName, ZLEVEL):
 
 	Graph2D(Type, name, g, ZLEVEL, getV)
 
-
+#Function to graph the eigenvectors of a specific Eigenvalue in the x-y plane at a specific ZLEVEL
 def PsiGraph2D(Type, ProjectName, ZLEVEL, EVAL_NUM=0):
 	g = gp.GridInfo.load(ProjectName, 3)
 	evec = np.load(Filenames.vecarray(ProjectName, g.NDIM))[EVAL_NUM]
 
+	#reads the eigenvalue file to find the specific eigenvalue
 	valFile = open(Filenames.valout(ProjectName, g.NDIM))
 	lines = valFile.readlines()
 
 	name = f"Psi for {ProjectName}, Eval {EVAL_NUM} which is {lines[EVAL_NUM]}"
 
+	#Function with a similar concept to getV(). This refreshed the graph whenever the Z-Level slider is moved. However, there are only discrete values for Z as the eigenvectors cannot be regenerated.
+	#The function rounds to the nearest zdivision it has in the total eigenvector array. 
 	def getSlice(newZ):
 		_, _, hz = g.hxyz()
 		div = round((newZ - g.ZMIN) / hz)
@@ -118,7 +120,7 @@ def Graph2D(Type, name, g, ZLEVEL, getSlice):
 
 		xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
 		ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
-		
+		#creates the grid of all points on the x-y plane
 		meshx, meshy = np.meshgrid(xgrid, ygrid, sparse=False, indexing="xy")
 
 		if Type == "surface":
@@ -126,6 +128,7 @@ def Graph2D(Type, name, g, ZLEVEL, getSlice):
 			axis = fig.add_subplot(111, projection='3d')
 		else:
 			fig, axis = plt.subplots(num=name)
+		#Slider for the Zlevel for 2D graphs through the use of widgets
 
 		zSlider = widgets.Slider(
 			ax=plt.axes([0.25, 0.0, 0.65, 0.03]), 
@@ -134,7 +137,7 @@ def Graph2D(Type, name, g, ZLEVEL, getSlice):
 			valmax=g.ZMAX,
 			valinit=ZLEVEL
 		)
-
+		#function that updates the Zlevel every time the slider is moved
 		def update(val):
 			g.ZLEVEL = val
 			
@@ -192,6 +195,7 @@ def Voxel3D(ProjectName, graphTitle, arr, level=None, minlev=None, maxlev=None):
 
 	g = gp.GridInfo.load(ProjectName, 3)
 
+	#if the minlevel or max level is not specified, it is loaded from the Array
 	if minlev == None: minlev = np.amin(arr)
 	if maxlev == None: maxlev = np.amax(arr)
 
@@ -200,6 +204,7 @@ def Voxel3D(ProjectName, graphTitle, arr, level=None, minlev=None, maxlev=None):
 	fig = plt.figure(num=graphTitle)
 	axis = fig.add_subplot(111, projection='3d')
 
+	#slider for Voxels
 	levelSlider = widgets.Slider(
 		ax=plt.axes([0.25, 0.0, 0.65, 0.03]), 
 		label='Boundary level',
@@ -246,16 +251,19 @@ def Voxel3D(ProjectName, graphTitle, arr, level=None, minlev=None, maxlev=None):
 
 
 
-		
+#function that graphs the Potential with respect to some axis on a certain 2D level		
 def PotentialGraphics1D(ProjectName, XLEVEL = None, YLEVEL = None, ZLEVEL = None, axis = "z"):  
 
 	V, axisgrid, _ = GraphicalGenerate1D(ProjectName, XLEVEL, YLEVEL, ZLEVEL, axis)
 	plt.plot(axisgrid, V)
 
 
+#function that graphs the Psi values with respect to some axis on a certain 2D level
 def PsiGraphics1D(ProjectName, XLEVEL = None, YLEVEL = None, ZLEVEL = None, axis = "z", EVAL_NUM=0):
 	g = gp.GridInfo.load(ProjectName, 3)
 	evec = np.load(Filenames.vecarray(ProjectName, g.NDIM))[EVAL_NUM]
+
+
 
 	hx, hy, hz = g.hxyz()
 	divx = round((XLEVEL - g.XMIN) / hx)
@@ -263,6 +271,7 @@ def PsiGraphics1D(ProjectName, XLEVEL = None, YLEVEL = None, ZLEVEL = None, axis
 	divz = round((ZLEVEL - g.ZMIN) / hz)
 
 	if axis == "x":
+		#takes the specified level or slice from the eigenvector array
 		slice = evec[:, divy, divz]
 		axisgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
 	elif axis == "y":
@@ -278,6 +287,8 @@ def PsiGraphics1D(ProjectName, XLEVEL = None, YLEVEL = None, ZLEVEL = None, axis
 	plt.show()
 
 
+
+#graphs the 2nd Derivatives of a potential in a specific axis
 def Potential2ndDerGraph1D(ProjectName, XLEVEL = None, YLEVEL = None, ZLEVEL = None, axis = "z"):
 	V, axisgrid, g = GraphicalGenerate1D(ProjectName, XLEVEL, YLEVEL, ZLEVEL, axis)
 
@@ -287,7 +298,7 @@ def Potential2ndDerGraph1D(ProjectName, XLEVEL = None, YLEVEL = None, ZLEVEL = N
 	if axis == "y": space = hy
 	if axis == "z": space = hz
 
-
+	#difference quotient
 	der = (V[0:-2] - 2*V[1:-1] + V[2:]) / space ** 2
 	dergrid = axisgrid[1:-1]
 

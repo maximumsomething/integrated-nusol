@@ -14,7 +14,7 @@ from scipy.special import cbrt
 from generate_potential import generate
 from inus_common_util import *
 
-
+#Feast can be toggled as a workaround for ARPACK; however we found no major difference from using it.
 USE_FEAST=False
 
 #-------5-------#       
@@ -24,6 +24,13 @@ USE_FEAST=False
 # HBAR in terms of ((J^2*s^2)(K/J)(m_u/Kg)(A/)^2)^ 1/2
 # = (hbar)^2 / Kb / m_u * 10^20x`
 # where hbar is planck's constant in joule-seconds, Kb is Boltzmann's constant, m_u is atomic mass in kilograms, and 10^20 is square angstroms per square meter.
+
+
+
+#Function for the Numerov method matrix generation
+#Numerov can either generate a potential from user input and solve it or load in a potential and solve it.
+#Ignoring M allows for a primitive version of the Numerov method with decreased runtime but decreased eigenvalue accuracy so it is not recommended.
+#Numerov takes gridInfo as a input which contains all the user inputs specifying what the grid should look like
 
 def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=2.0, HBAR = 6.96482118, IgnoreM = True, Generate = True):
 	g = gridInfo # for shortness
@@ -49,13 +56,14 @@ def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=2.0, HBAR =
 
 
 #-------5.2-------# 
+#Creates all the filenames using the Filenames class in util
 	PotentialArrayPath = Filenames.potarray(ProjectName, g.NDIM)
 	GenerateInfofile = Filenames.generateinfo(ProjectName, g.NDIM)
 	EIGENVALUES_OUT = Filenames.valout(ProjectName, g.NDIM)
 	EIGENVECTORS_OUT = Filenames.vecout(ProjectName, g.NDIM)
 	EigenvectorArray = Filenames.vecarray(ProjectName, g.NDIM)
 
-
+#Checks if file exists or can write to it
 	checkSuccess = checkFileWriteable(EIGENVALUES_OUT, "eigenvalue out", Overwrite)
 	checkSuccess &= checkFileWriteable(EIGENVECTORS_OUT, "eigenvector out", Overwrite)
 	checkSuccess &= checkFileWriteable(EigenvectorArray, "eigenvector analysis", Overwrite)
@@ -71,9 +79,11 @@ def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=2.0, HBAR =
 		sys.exit()
 		
 #-------5.5-------#
+#generates the potential from generate_potential.py
 	if Generate == True:
 		V = generate(ProjectName, g, Overwrite)
 #-------5.6-------# 
+#loads the potential specified	
 	else:
 		V = np.load(PotentialArrayPath)
 
@@ -81,20 +91,22 @@ def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=2.0, HBAR =
 	startTimer("Create numerov matrices")
 
 	hx, hy, hz = g.hxyz()
-
+#formulates the matrices depending on the specified divisions and diminsions
 	if g.NDIM == 1:
 		A, M = createNumerovMatrices1D(V, g.ZDIV, hz, MASS, HBAR)
 	elif g.NDIM == 2:
 		A, M = createNumerovMatrices2D(V, g.XDIV, g.YDIV, hx, MASS, HBAR)
 	elif g.NDIM == 3:
 		A, M = createNumerovMatrices3D(V, g.XDIV, g.YDIV, g.ZDIV, hx, MASS, HBAR)
-	
+#runs feast if feast is toggled on
 	if USE_FEAST:
 		runFeast(A, M, EIGENVALUES_OUT, EIGENVECTORS_OUT)
 	else:
 		startTimer("solve eigs")
+		#calls the primitive Numerov Method solver
 		if IgnoreM:
 			eval, evec = solveEigsApprox(A, N_EVAL)
+		#calls the full Numerov Method solver
 		else:
 			eval, evec = solveEigs(A, M, N_EVAL)
 		endTimer()
@@ -105,11 +117,15 @@ def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=2.0, HBAR =
 		# evec = evec.T[norder].real
 
 		# Must do this if not sorting
+		
+		#Transposes eigenvector array
 		evec = evec.T
 
+		#writes the outputs to a file
 		writeEigs(eval, evec, EIGENVALUES_OUT, EIGENVECTORS_OUT)
 
 		print("Saving Eigenvector array File...")
+		#converts the eigenvector output into a numpy array for future analysis
 		evec_array = convertEvec(evec, g.NDIM, g.XDIV, g.YDIV, g.ZDIV)
 		np.save(EigenvectorArray, evec_array)
 		print("Saved!")
@@ -117,19 +133,24 @@ def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=2.0, HBAR =
 		return eval
 
 #-------5.7-------# 
+#Function to formulate the A and M matrices for 1D
 def createNumerovMatrices1D(V, ZDIV, hz, MASS, HBAR):
 	preFactor1D = -6.0* HBAR * HBAR / (MASS * hz * hz)
 	NumerovMatrix1D = []
 	FORTRANoffset = 1
 	Nele = 0
+	#loops through divisions on the z-axis
 	for i in range(ZDIV):
+		#considers the current division
 		NumerovMatrix1D.append(
 			[FORTRANoffset + i, FORTRANoffset + i, -2.0 * preFactor1D + 10.0 * V[i], 10.0])
 		Nele += 1
+		#considers the potential one division before the current division
 		if i - 1 >= 0:
 			NumerovMatrix1D.append(
 				[FORTRANoffset + i, FORTRANoffset + i - 1, 1.0 * preFactor1D + V[i - 1], 1.0])
 			Nele += 1
+		#considers the potential one division after the current division
 		if i + 1 < ZDIV:
 			NumerovMatrix1D.append(
 				[FORTRANoffset + i, FORTRANoffset + i + 1, 1.0 * preFactor1D + V[i + 1], 1.0])
@@ -140,11 +161,13 @@ def createNumerovMatrices1D(V, ZDIV, hz, MASS, HBAR):
 	col = NumerovMatrix1D[:, 1] - 1
 	dataA = NumerovMatrix1D[:, 2]
 	dataM = NumerovMatrix1D[:, 3]
+	#changes the format of A and M into coo and csr matrices respectively. This is because they are sparse matrices and this saves computing time when solving
 	A = sp.coo_matrix((dataA, (row, col)), shape=(ZDIV, ZDIV))
 	M = sp.csr_matrix((dataM, (row, col)), shape=(ZDIV, ZDIV))
 	return (A, M)
 
 #-------5.8-------#
+#function similar to createNumerovMatrices1D but now expanded to both x and y
 def createNumerovMatrices2D(V, XDIV, YDIV, hx, MASS, HBAR):
 	preFactor2D =  (HBAR * HBAR) / (MASS * hx * hx)
 	Nx = XDIV
@@ -164,6 +187,7 @@ def createNumerovMatrices2D(V, XDIV, YDIV, hx, MASS, HBAR):
 					NumerovMatrix2D.append(
 						[FORTRANoffset + iNx + iKx, FORTRANoffset + iNy + iKy - 1, -   1.0 * preFactor2D, 0.0])
 					Nele += 1
+				#looks at the potential one xdivision before the current point
 				NumerovMatrix2D.append([FORTRANoffset + iNx + iKx, FORTRANoffset + iNy + iKy,
 									  -   4.0 * preFactor2D + V[iN - 1, iK], 1.0])
 				Nele += 1
@@ -177,6 +201,7 @@ def createNumerovMatrices2D(V, XDIV, YDIV, hx, MASS, HBAR):
 			iKx = iK
 			iKy = iK
 			if (iKy - 1 >= 0):
+			#looks at the potential one ydivision before the current point
 				NumerovMatrix2D.append([FORTRANoffset + iNx + iKx, FORTRANoffset + iNy + iKy - 1,
 									  -  4.0 * preFactor2D + V[iN, iK - 1], 1.0])
 				Nele += 1
@@ -184,6 +209,7 @@ def createNumerovMatrices2D(V, XDIV, YDIV, hx, MASS, HBAR):
 									+ 20.0 * preFactor2D + 8.0 * V[iN, iK], 8.0])
 			Nele += 1
 			if (iKy + 1 < Ny):
+			#looks at the potential one ydivision after the current point
 				NumerovMatrix2D.append([FORTRANoffset + iNx + iKx, FORTRANoffset + iNy + iKy + 1,
 									  -  4.0 * preFactor2D + V[iN, iK + 1], 1.0])
 				Nele += 1
@@ -197,6 +223,7 @@ def createNumerovMatrices2D(V, XDIV, YDIV, hx, MASS, HBAR):
 					NumerovMatrix2D.append(
 							[FORTRANoffset + iNx + iKx, FORTRANoffset + iNy + iKy - 1, -  1.0 * preFactor2D, 0.0])
 					Nele += 1
+				#looks at the potential one xdivision after the current point
 					NumerovMatrix2D.append([FORTRANoffset + iNx + iKx, FORTRANoffset + iNy + iKy,
 											-  4.0 * preFactor2D + V[iN + 1, iK], 1.0])
 					Nele += 1
@@ -218,6 +245,8 @@ def createNumerovMatrices2D(V, XDIV, YDIV, hx, MASS, HBAR):
 	return (A, M)
 
 #-------5.9-------#
+
+#function for generating matrices in 3D for numerov (creates a 27 diagonal block-block matrix)
 def createNumerovMatrices3D(V, XDIV, YDIV, ZDIV, hx, MASS, HBAR):
 	preFactor3D = - (HBAR * HBAR) / (2.0 * MASS * hx * hx)
 	Nx = XDIV
@@ -423,6 +452,9 @@ def createNumerovMatrices3D(V, XDIV, YDIV, ZDIV, hx, MASS, HBAR):
 	M = sp.csr_matrix((dataM, (row, col)), shape=(
 	XDIV * YDIV * ZDIV, ZDIV * YDIV * ZDIV))
 	
+
+
+	#test code to see if exploiting centrosymmetric properties of matrices makes run time quicker
 	# BigA = A[:16383, 0:16383]
 	# BigB = A[:16383, 16384:32767]
 	# BigB = np.flip(BigB, 1)
@@ -438,6 +470,8 @@ def createNumerovMatrices3D(V, XDIV, YDIV, ZDIV, hx, MASS, HBAR):
 	return(A, M)
 #-------5.10-------# 
 
+
+#function to solver the eigenvalue problem but primitively (IgnoreM)
 def solveEigsApprox(A, N_EVAL):
 	# Using shift-invert mode was tested and did not lead to faster results
 	# The eigsh function seemed to lead to nonsense
@@ -452,6 +486,8 @@ def solveEigsApprox(A, N_EVAL):
 	eval /= 12
 	return eval, evec
 
+
+#solves eigenvalue problem but does not ignore M
 def solveEigs(A, M, N_EVAL):
 	#startTimer("convert to dense")
 	#MDense = M.todense()
@@ -490,6 +526,8 @@ def convertEvec(evec, NDIM, XDIV, YDIV, ZDIV):
 	return evec_array
 
 
+
+#Function that sees if the total area under psi squared is 1. NuSol should normalize everything
 def eigAnalysis(evec):
 	print("psi^2 sum is:", np.sum(evec ** 2))
 
@@ -511,6 +549,8 @@ def writeEigs(eval, evec, EIGENVALUES_OUT, EIGENVECTORS_OUT):
 	f.close()
 	print("Save complete!")
 
+
+#function to call feast
 def runFeast(A, M, EIGENVALUES_OUT, EIGENVECTORS_OUT):
 	FEAST_COMMAND="wsl LD_LIBRARY_PATH=/opt/intel/oneapi/compiler/2022.0.2/linux/compiler/lib/intel64_lin/ $(wslpath 'C:\\Users\\Student\\Desktop\\NuSol_original\\lib\\NuSol_FEAST')"
 	FEAST_MATRIX_OUT_PATH = "./FEAST_MATRIX"
