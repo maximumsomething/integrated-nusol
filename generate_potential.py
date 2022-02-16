@@ -1,4 +1,3 @@
-#-------1-------#
 import numpy as np
 import sys
 import operator
@@ -15,7 +14,9 @@ np.set_printoptions(threshold=sys.maxsize)
 
 from inus_common_util import *
 
-#-------2-------#
+# A class to store the parameters of each atom used to generate the potential.
+# sigma and epsilon are used for Lennard-Jones potential, charge is used for electrostatic potential, 
+# coordinates are used for both, and mass is unused.
 class atom:
 	def __init__ (self, x, y, z, charge=0, sigma=0, epsilon=0, mass=0):
 		self.x=x
@@ -30,6 +31,7 @@ class atom:
 		return f"atom @ ({self.x:.3f}, {self.y:.3f}, {self.z:.3f}) q={self.charge} σ={self.sigma} ε={self.epsilon} m={self.mass}"
 
 
+# The original atoms from Mof-5 used to generate a test potential.
 # MOF5atoms = [atom(-1.855325180842072, 0.0, 0.656043110880173, 1.8529, 2.4616, 0.0001976046, 0),
 # 		 atom(0.9276625904210358, -1.606758738890191, 0.656043110880173, 1.8529, 2.4616, 0.0001976046, 0),
 # 		 atom(0.9276625904210358, 1.6067587388901914, 0.656043110880173, 1.8529, 2.4616, 0.0001976046, 0),
@@ -44,6 +46,12 @@ class atom:
 # 		 atom(2.92305775972126, 0.0, 2.0669139636988607, -0.1378, 3.431, 0.000167333, 0),
 # 		 atom(-1.4615288798606296, 2.53144227664784, 2.0669139636988607, -0.0518, 3.431, 0.000167333, 0)]
 
+# Convert epsilon from hartree energy to kelvin. Uncomment if the above list of atoms are used.
+#for changeAtom in MOF5atoms:
+#	changeAtom.epsilon *= 315775.3268
+
+
+# An expanded list of Mof-5 atoms for a test potential, covering one single, complete molecule.
 MOF5atoms = [
 atom(1.606763689, -0.927665448, 0.655958529, 1.8529, 2.4616, 62.3993, 0),
 atom(0.0, 0.0, 0.0, -2.2568, 3.118, 30.19, 0),
@@ -111,25 +119,41 @@ atom(-0.000183211, -3.116723196, -0.827689519, -1.0069, 3.118, 30.19, 0),
 atom(2.699069859, 10.83855961, 5.734289235, -1.0069, 3.118, 30.19, 0),
 atom(2.69925307, 1.558202932, -0.827689519, -1.0069, 3.118, 30.19, 0)]
 
-#------3-------#
+# Lennard-Jones parameters for the hydrogen molecule that will be interacting with the MOF.
 hydrogensigma = 2.571
 hydrogenepsilon = 22.1398
 
-# For electrostatic potential
-# Coulumb's constant in K-Å/(e-)^2
+# Coulumb's constant in K-Å/(e-)^2 for electrostatic potential
 Ck = 167101.002
-#Ck = 8.9875517923E9
-# Polarization constant of hydrogen in Å^3
+
+# Polarization constant of hydrogen in Å^3 for electrostatic potential
 alpha = 0.675
 
-#for changeAtom in MOF5atoms:
-#	changeAtom.epsilon *= 315775.3268
-
+# This import needs to be here to avoid an infinite loop
 from atoms_from_cif import AtomsFromCif
 
+# This class stores all the parameters needed to generate the potential.
 class GridInfo:
 
 	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, Estatic=True, CifAtoms=False, AtomSrc=None, Analytic = False, UserFunction = "", Limited = True, PotentialLimit = 10000, axis = None):
+		"""
+		Construct a GridInfo object.
+
+		The first several parameters specify the location and size of the window.
+		NDIM is the number of dimensions (must be 1, 2, or 3).
+		XMIN, XMAX, YMIN, YMAX, ZMIN, ZMAX specify the position of the window (in angstroms) in 3D space.
+		XLEVEL, YLEVEL, ZLEVEL specify the location of the window when NDIM < 3.
+		In two dimensions, ZMIN and ZMAX are ignored, and ZLEVEL specifies the z-coordinate of the window.
+		In one dimension, axis is either 'x', 'y', or 'z' (defaults to 'z'). 
+		For example, if axis='z', ZMIN, ZMAX, XLEVEL, and YLEVEL are used, and XMIN, XMAX, YMIN, YMAX are ignored.
+		XDIV, YDIV, ZDIV specify the number of grid points along each dimension. 
+		
+		The remaining parameters specify details about how the potential is generated:
+		If Estatic=True, then the electrostatic potential is added to the potential. If Estatic=False, then only the Lennard-Jones potential is used.
+		If CifAtoms=True, then a AtomsFromCif object must be provided in AtomSrc. 
+		If Analytic=True, then UserFunction must be a string containg a Python expression providing the potential at a point as a function of x, y, and z.
+		If Limited=True, then the potential will be capped at PotentialLimit.
+		"""
 
 		# We need to check here because the load function might give None instead of letting it default
 		if XDIV == None: XDIV = 1
@@ -152,6 +176,8 @@ class GridInfo:
 			raise ValueError("Analytic is not in a boolean format. Make sure it is either true or false.")
 		elif type(UserFunction) != str and Analytic == True:
 			raise ValueError("Function is not in a string format. Make sure the function is in quotation marks and contains only approproiate characters.")
+		elif CifAtoms and type(AtomSrc) != AtomsFromCif:
+			raise ValueError("AtomSrc must be an AtomsFromCif object.")
 
 		self.NDIM = NDIM
 
@@ -176,21 +202,25 @@ class GridInfo:
 		self.PotentialLimit = PotentialLimit
 		self.axis = axis
 
-		if NDIM == 1 and axis == "z":
-			self.XMIN = XLEVEL
-			self.XMAX = XLEVEL
-			self.YMIN = YLEVEL
-			self.YMAX = YLEVEL
-		if NDIM == 1 and axis == "x":
-			self.YMIN = YLEVEL
-			self.YMAX = YLEVEL
-			self.ZMIN = ZLEVEL
-			self.ZMAX = ZLEVEL
-		if NDIM == 1 and axis == "y":
-			self.ZMIN = ZLEVEL
-			self.ZMAX = ZLEVEL
-			self.XMIN = XLEVEL
-			self.XMAX = XLEVEL
+		if NDIM == 1:
+			if axis == "z":
+				self.XMIN = XLEVEL
+				self.XMAX = XLEVEL
+				self.YMIN = YLEVEL
+				self.YMAX = YLEVEL
+			elif axis == "x":
+				self.YMIN = YLEVEL
+				self.YMAX = YLEVEL
+				self.ZMIN = ZLEVEL
+				self.ZMAX = ZLEVEL
+			elif axis == "y":
+				self.ZMIN = ZLEVEL
+				self.ZMAX = ZLEVEL
+				self.XMIN = XLEVEL
+				self.XMAX = XLEVEL
+			else:
+				raise ValueError("axis must be x, y, or z")
+
 		if NDIM == 2:
 			self.ZMIN = ZLEVEL
 			self.ZMAX = ZLEVEL
@@ -202,12 +232,21 @@ class GridInfo:
 		self.warned = False
 
 	def WindowAround3DPoint(SIZE, X=0.0, Y=0.0, Z=0.0, DIV=25, Estatic=True, CifAtoms=False, AtomSrc=None, Analytic=False, UserFunction="", Limited = True, PotentialLimit = 10000.0):
+		"""
+		This is a convenience function to construct a cubic window. It will create a cube of SIZE angstroms and DIV divisions around 
+		the point (X, Y, Z). For a description of the other parameters, see __init__()
+		"""
+
 		if type(SIZE) != float:
 			raise ValueError("SIZE must be floating-point.")
 
 		return GridInfo(3, X - SIZE/2.0, X + SIZE/2.0, DIV, 0.0, Y - SIZE/2.0, Y + SIZE/2.0, DIV, 0.0, Z - SIZE/2.0, Z + SIZE/2.0, DIV, 0.0, Estatic, CifAtoms, AtomSrc, Analytic, UserFunction, Limited, PotentialLimit)
 
+
 	def hxyz(self):
+		"""
+		Returns the grid spacing in each dimension--usually denoted as hx, hy, and hz--of this GridInfo object.
+		"""
 
 		try:
 			hx = (self.XMAX - self.XMIN) / (self.XDIV - 1)
@@ -233,11 +272,17 @@ class GridInfo:
 		return hx, hy, hz
 
 	def atoms(self):
+		"""
+		Returns the atoms used to generate the potential.
+		"""
 		if self.CifAtoms:
 			return self.AtomSrc.atoms
 		else: return MOF5atoms
 
 	def saveToFile(self, ProjectName, file):
+		"""
+		Saves all the parameters of this GridInfo to a file.
+		"""
 		print("ProjectName=%s\nNDIM=%d\nXMIN=%.8f\nXMAX=%.8f\nXDIV=%d\nXLEVEL=%.8f\nYMIN=%.8f\nYMAX=%.8f\nYDIV=%d\nYLEVEL=%.8f\nZMIN=%.8f\nZMAX=%.8f\nZDIV=%d\nZLEVEL=%.8f\nEstatic=%s\nCifAtoms=%s\nAnalytic=%s\nUserFunction=%s\n Limited=%s\n PotentialLimit=%d\n Axis=%s\n" % (ProjectName, self.NDIM, self.XMIN, self.XMAX, self.XDIV, self.XLEVEL, self.YMIN, self.YMAX, self.YDIV, self.YLEVEL, self.ZMIN, self.ZMAX, self.ZDIV, self.ZLEVEL, self.Estatic, self.CifAtoms, self.Analytic, self.UserFunction, self.Limited, self.PotentialLimit, self.axis), file=file)
 
 		if self.CifAtoms:
@@ -245,6 +290,9 @@ class GridInfo:
 
 
 	def save(self, ProjectName):
+		"""
+		Saves all the parameters of this GridInfo to the default filename for ProjectName.
+		"""
 		filename = Filenames.generateinfo(ProjectName, self.NDIM)
 		if filename != self.loadedFromFile: # Don't overwrite file that we loaded from
 			try:
@@ -255,34 +303,39 @@ class GridInfo:
 				print("WARNING: The potential file", filename, "did not save. The file you wanted to save to was already opened.")
 
 	def load(ProjectName, NDIM):
+		"""
+		Loads a previously saved GridInfo from the default filename determined by ProjectName and NDIM.
+
+		The file format is flexible. Each line is of the form key=value, where key is the name of the argument to GridInfo's constructor. Unrecognized arguments are ignored. It also supports comments starting with #.
+		"""
 		return GridInfo.loadFromFile(Filenames.generateinfo(ProjectName, NDIM))
-	
-	"""
-	File format:
-	key=value
-	#comment
-	"""
+
+
 	def loadFromFile(path):
+		""" Loads a previously saved GridInfo from the given filename. """
 		try:
 			file = open(path, "r")
 			lines = file.readlines()
-			# A dictionary that returns None instead of throwing an error when a missing key is accessed
+			# The first step of the parser is to load every key-value pair into the dictionary v, 
+			# which returns None instead of throwing an error when a missing key is accessed.
 			v = collections.defaultdict(lambda: None, {})
 			linecount = 0
 			for line in lines:
 				linecount += 1
-				line = line.strip()
-				if len(line) > 0 and not line.startswith("#"):
-					splitted = line.split('=', 2)
+				line = line.strip() # Remove leading and trailing spaces
+				if len(line) > 0 and not line.startswith("#"): # Ignore empty lines and comments
+					splitted = line.split('=', 2) # Split into key and value around the equals sign
 					if len(splitted) < 2: print("Syntax error loading line ", linecount, ': "', line, '"', sep='')
 					v[splitted[0].strip()] = tryParseStringToType(splitted[1].strip())
 
 			print("read from file:", v)
 
+			# Construct the CifAtoms sub-object if necessary
 			if v['CifAtoms']:
 				AtomSrc = AtomsFromCif(v['AtomSrcFile'], v['AtomSrcRadius'], v['BINDING_LABEL'], v['ORIGIN_LABEL'], v['EXCLUDED_SITES'])
 			else: AtomSrc = None
 
+			# Call the constructor with the relevant items of the dictionary
 			gridInfo = GridInfo(v['NDIM'], v['XMIN'], v['XMAX'], v['XDIV'], v['XLEVEL'], v['YMIN'], v['YMAX'], v['YDIV'], v['YLEVEL'], v['ZMIN'], v['ZMAX'], v['ZDIV'], v['ZLEVEL'], v['Estatic'], v['CifAtoms'], AtomSrc, v['Analytic'], v['UserFunction'], v['Limited'], v['PotentialLimit'], v['Axis'])
 			gridInfo.loadedFromFile = path
 			return gridInfo
@@ -290,7 +343,8 @@ class GridInfo:
 			print("Error: Could not read potential file", path)
 			sys.exit()
 
-# Helper function for load()
+# Helper function for load().
+# Returns a number, boolean, or array if the input string looks like one of those, or the string otherwise.
 def tryParseStringToType(string):
 	try:
 		return int(string)
@@ -306,17 +360,21 @@ def tryParseStringToType(string):
 				return ast.literal_eval(string)
 			else: return string
 
-# Floating point can't exactly represent all numbers, so this function is needed to check "equality"
-# of floating point numbers from different sources
+# Floating point can't exactly represent all numbers, so this function is used to check "equality"
+# of floating point numbers from different sources.
 def inexactEqual(a, b):
 	largest = np.maximum(np.abs(a), np.abs(b))
 	return np.abs(a - b) < 0.000000000000001 * largest
 
 
 
-#-------4-------#
-# Returns values in kelvins
 def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
+	"""
+	Generates the potential given the gridInfo object.
+	PrintAnalysis: Whether to save the potential and gridInfo to a file, as well as whether to run some analysis on the generate potential.
+	Overwrite: Whether to overwrite existing potential, generateinfo, and analysis files.
+	"""
+
 	g = gridInfo # for shortness
 		#-------4.1-------#
 	if type(Overwrite) != bool:
@@ -328,6 +386,7 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 	startTimer("generate")
 
 	if PrintAnalysis:
+		# Get file paths and check whether they are writeable.
 		PotentialArrayPath = Filenames.potarray(ProjectName, g.NDIM)
 		GenerateInfofile = Filenames.generateinfo(ProjectName, g.NDIM)
 		PotentialAnalysisPath = Filenames.potentialAnalysis(ProjectName, g.NDIM)
@@ -339,8 +398,8 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 		if not checkSuccess:
 			sys.exit()
 
-
 	if g.Analytic == False:
+		# Generate using LJ and maybe electrostatic.
 		x, y, z = meshgrids(g)
 		V = pointPotential(g.atoms(), g.Estatic, x, y, z)
 			       
@@ -358,7 +417,7 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 		# V = smoothChop(V, g.PotentialLimit)
 		V = chopPot(V, g.PotentialLimit)
 				
-#-------4.5-------# 
+
 	print("########################### \n Done generating potential! \n###########################)")
 	#print(V)
 	
@@ -366,7 +425,6 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 		potAnalFile = open(PotentialAnalysisPath, "w")
 		potentialAnalysis(g, potAnalFile, V)
 
-	#-------4.7-------#
 		
 		print("########################### \nSaving the potential array as", PotentialArrayPath, "\n###########################")
 		np.save(PotentialArrayPath, V)
@@ -375,8 +433,7 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 	
 	return V	
 	
-
-#-------4.4-------#  
+# Generate by eval()-ing the user function.
 def generateFromUserFn(g):
 	
 	x, y, z = meshgrids(g)
@@ -390,7 +447,7 @@ def generateFromUserFn(g):
 
 	return V
 
-
+# Returns the meshgrid for g. The variable x returned by this function is a NDIM-dimensional array with the value at some (integer) coordinate being the x-value (in angstroms) at that coordinate.
 def meshgrids(g):
 	if g.NDIM == 1 and g.axis == "z":
 		Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)	
@@ -424,20 +481,29 @@ def meshgrids(g):
 def chopPot(V, VMAX):
 	return np.where(V < VMAX, V, VMAX)
 
-# These smoothing functions don't seem to result in anything different from the hard limiter above
-# VMAX is a "soft cap". VCHOP is the hard cap. This transform probably has a name, but I don't know what it is.
 
+# A test of a few different functions that attempt to smooth the "corner" when the potential is cut off at VMAX. 
+# In all three cases, VMAX acts as a "soft" cap where values above it get gradually shrunk.
 def smoothChop(V, VMAX):
-	# VCHOP = VMAX * 10.0
-	# transformedV = VMAX + (V - VMAX) * (VCHOP*2 - (V - VMAX))/(VCHOP*2)
-	# m = VCHOP * np.exp(1.0)
-	# transformedV = VMAX + (V - VMAX) * (np.exp(-(V - VMAX)/m))
-	# return np.where(V < VCHOP, np.where(V < VMAX, V, transformedV), VCHOP)
 
+	# Logarithmic cutoff.
 	b = 1 + 1/VMAX
 	transformedV = VMAX + np.log(V - VMAX + 1/np.log(b))/np.log(b) - np.log(1/np.log(b))/np.log(b)
 	return np.where(V < VMAX, V, transformedV)
 
+	# For the next two smoothing functions, VCHOP represents the "hard" cap, where the potential will not go above no matter what.
+	# VCHOP = VMAX * 10.0 
+
+	# parabolic cutoff.
+	# transformedV = VMAX + (V - VMAX) * (VCHOP*2 - (V - VMAX))/(VCHOP*2)
+
+	# Exponential cutoff.
+	# m = VCHOP * np.exp(1.0)
+	# transformedV = VMAX + (V - VMAX) * (np.exp(-(V - VMAX)/m))
+
+	# return np.where(V < VCHOP, np.where(V < VMAX, V, transformedV), VCHOP)
+
+	
 
 # Smoothing test, averages the point with its 2/8/26 neighbors
 def smoothPot(V, NDIM):
@@ -448,7 +514,8 @@ def smoothPot(V, NDIM):
 	return scipy.ndimage.convolve(V, kernel)
 
 
-
+# Prints some important things about the potential, like the minimum, maximum, and second derivative at the minimum.
+# Prints both to stdout and the given file.
 def potentialAnalysis(g, file, V):
 	hx, hy, hz = g.hxyz()
 
@@ -546,20 +613,22 @@ def potentialAnalysis(g, file, V):
 				doubleprint(file, "Del Squared is undefined.")
 				delsquared = float("nan")
 
-
+# Helper function for printAnalysis().
+# Prints to both the file and stdout.
 def doubleprint(file, *args, **kwargs):
 	print(*args, **kwargs)
 	print(*args, **kwargs, file=file)
 
 
-
+# Calculates the numeric potential for a single point or a meshgrid. 
+# atoms is an array of atom, Estatic is a boolean of whether to include the electrostatic potential.
 def pointPotential(atoms, Estatic, x, y, z):
 	V = LJPotential(atoms, x, y, z)
 	if Estatic:
 		V += EstaticPotential(atoms, x, y, z)
 	return excludeAtoms(V, atoms, x, y, z)
 
-# Calculates in hartree then returns kelvins
+# Calculate the lennard-jones potential for a single point or meshgrid
 def LJPotential(atoms, xval, yval, zval):
 	LJ = 0
 	for atom in atoms:
@@ -571,6 +640,7 @@ def LJPotential(atoms, xval, yval, zval):
 
 	return LJ
 
+# Calculate the electrostatic potential for a single point or meshgrid
 def EstaticPotential(atoms, x, y, z):
 	# E is the electric field at the point,
 	# rHat is the unit vector pointing from the atom towards the point,
@@ -599,7 +669,7 @@ def EstaticPotential(atoms, x, y, z):
 	return -Ck * (alpha/2) * (Ex**2 + Ey**2 + Ez**2)
 
 
-# Exclude points within 1A of atom
+# Exclude points within 1A of any atom
 def excludeAtoms(V, atoms, x, y, z):
 	mask = np.isnan(V)
 	for atom in atoms:

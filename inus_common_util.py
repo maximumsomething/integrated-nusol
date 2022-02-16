@@ -4,6 +4,9 @@ import os.path
 global timerName
 timerName = ""
 timerStart = 0
+
+# Some small functions to help time parts of the code.
+# Start a timer. End the previous timer if there was one running.
 def startTimer(name):
 	global timerName
 	global timerStart
@@ -12,6 +15,7 @@ def startTimer(name):
 	timerName = name
 	timerStart = time.process_time()
 
+# End the timer and print the time it took.
 def endTimer():
 	global timerName
 	global timerStart
@@ -19,7 +23,8 @@ def endTimer():
 	print(timerName, "took", format(timerEnd - timerStart, '.4f'), "s")
 	timerName = ""
 
-
+# Check to make sure the file doesn't already exist (if Overwrite=False) and can be written to. 
+# Prints an appropriate error using `description` if it cannot.
 def checkFileWriteable(path, description, Overwrite):
 	if Overwrite:
 		try:
@@ -35,6 +40,7 @@ def checkFileWriteable(path, description, Overwrite):
 	
 	return True
 
+# Check to make sure the file can be read, and print an error if it cannot.
 def checkFileReadable(path, description):
 	if not os.path.exists(path):
 		print("The ", description, 'file "', path, '" you are trying to access does not exist.', sep="")
@@ -42,8 +48,9 @@ def checkFileReadable(path, description):
 	else:
 		return True
 
+# The following functions return the filenames saved to and loaded from by different parts of the code.
+# All of them include the project name and number of dimensions.
 class Filenames:
-
 	def generateinfo(ProjectName, NDIM):
 		os.makedirs("generate_info", exist_ok=True)
 		return os.path.join("generate_info", "%s%sD_geninfo.dat" %(ProjectName, NDIM))

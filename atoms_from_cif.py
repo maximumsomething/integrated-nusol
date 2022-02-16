@@ -7,13 +7,26 @@ from inus_common_util import *
 from generate_potential import atom
 
 
-# Loads a CIF (crystallographic information) file, finds all atoms in a radius around the binding site, 
-# and transforms it so that the origin site is at the origin and the binding site is along the +z axis.
-
-
 class AtomsFromCif:
+	"""
+	Loads a CIF (crystallographic information) file, finds all atoms in a radius around the binding site, 
+	transforms it so that the origin site is at the origin and the binding site is along the +z axis, and 
+	puts it into generate_potential's atom class.
+
+	Currently, it uses a table of lennard-jones and charge parameters for mof-5. In the future, we should expand
+	this to something generalizable across different mofs.
+	"""
 
 	def __init__(self, file, radius=6.0, BINDING_LABEL="D1", ORIGIN_LABEL="O1", EXCLUDED_SITES=["D1", "D2", "D3", "D4", "D5"]):
+		"""
+		file: The path to load from
+		radius: The radius (in angstroms) around the binding site to include atoms from
+		BINDING_LABEL: The label of the binding site in the CIF file
+		ORIGIN_LABEL: The label of the atom which will be transformed to be the origin
+		EXCLUDED_SITES: Labels of sites we want to exclude from the final list of atoms (usually the binding sites)
+		"""
+
+
 		self.file = file
 		self.radius = radius
 		self.BINDING_LABEL = BINDING_LABEL
@@ -35,6 +48,8 @@ def load_atoms_from_cif(file, radius=6.0, BINDING_LABEL="D1", ORIGIN_LABEL="O1",
 
 	startTimer("Find nearby atoms")
 
+	# Read the file into a gemmi "small structure".
+	# As far as I can tell, small structures are appropriate for everything except polymers.
 	structure = gemmi.read_small_structure(file)
 
 	print(structure)
@@ -42,22 +57,25 @@ def load_atoms_from_cif(file, radius=6.0, BINDING_LABEL="D1", ORIGIN_LABEL="O1",
 	print("Num sites:", len(structure.sites))
 	# print(structure[0])
 
-
+	# Find the binding site in the structure
 	for site in structure.sites:
 		if site.label == BINDING_LABEL:
 			bindingSite = site
 		# if site.label == ORIGIN_LABEL:
 		# 	originSite = site
 
-
-
-	ns = gemmi.NeighborSearch(structure, radius*2).populate()
-	# print(ns)
-	neighbors = ns.find_site_neighbors(bindingSite, max_dist=radius)
-
 	bindingPos = bindingSite.orth(structure.cell)
 
-	# Search for nearest atom with the origin site's label
+
+	# Initialize a neighbor search object, with unit cells included up to radius*2.
+	# For more information, see https://gemmi.readthedocs.io/en/latest/analysis.html#neighbor-search
+	# and https://project-gemmi.github.io/python-api/gemmi.NeighborSearch.html
+	ns = gemmi.NeighborSearch(structure, radius*2).populate()
+	# print(ns)
+	# Find the neighbors within the radius.
+	neighbors = ns.find_site_neighbors(bindingSite, max_dist=radius)
+
+	# Search for nearest atom to the binding site with the origin site's label
 	originSite = None
 	originPos = None
 	for mark in neighbors:
@@ -69,12 +87,12 @@ def load_atoms_from_cif(file, radius=6.0, BINDING_LABEL="D1", ORIGIN_LABEL="O1",
 
 	if originSite == None:
 		raise ValueError(f"Origin site {ORIGIN_LABEL} not found within radius")
-
-	# originPos = originSite.orth(structure.cell)
 	
 
-
+	# Get the translation vector which will transform every atom's coordinates so that the origin is at the center.
 	translationVec = np.array([-originPos.x, -originPos.y, -originPos.z])
+
+	# Get the rotation matrix which will rotate the binding site onto the +z axis.
 
 	# Get axis vector to become z-axis
 	axis = bindingPos - originPos
@@ -97,7 +115,8 @@ def load_atoms_from_cif(file, radius=6.0, BINDING_LABEL="D1", ORIGIN_LABEL="O1",
 
 
 
-	# Lennard-Jones sigma and epsilon values for each element in MOF-5
+	# Lennard-Jones sigma and epsilon values for each element in MOF-5.
+	# In the future, this should be generalized for more MOFs.
 	LJTable = {
 		"Zn": [2.46, 62.4],
 		"O": [3.12, 30.2],
@@ -116,17 +135,16 @@ def load_atoms_from_cif(file, radius=6.0, BINDING_LABEL="D1", ORIGIN_LABEL="O1",
 		"H3": 0.15,
 	}
 
-	# eliminate duplicate atoms, which gemmi might give you due to symmetry
+	# eliminate duplicate atoms at the same position, which gemmi might give you due to symmetry.
 	trimmedNeighbors = {} # Table of positions and marks
 	for mark in neighbors:
 		trimmedNeighbors[HashablePoint(mark.x, mark.y, mark.z)] = mark
 
 	print("Num atoms:", len(trimmedNeighbors))
+	
 
-
+	# Finally, calculate the transformed position of each atom and put it into generate_potential's atom class.
 	atoms = []
-
-
 	for _, mark in trimmedNeighbors.items():
 		# print(mark)
 
