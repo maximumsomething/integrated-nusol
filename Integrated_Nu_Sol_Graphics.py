@@ -16,6 +16,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 np.set_printoptions(threshold=sys.maxsize)
 
 import generate_potential as gp
+from inus_common_util import *
 
 
 
@@ -89,9 +90,9 @@ def PotentialGraph2D(Type, ProjectName, ZLEVEL):
 
 def PsiGraph2D(Type, ProjectName, ZLEVEL, EVAL_NUM=0):
 	g = gp.GridInfo.load(ProjectName, 3)
-	evec = np.load("vecarray%s%sD.npy" %(ProjectName, g.NDIM))[EVAL_NUM]
+	evec = np.load(Filenames.vecarray(ProjectName, g.NDIM))[EVAL_NUM]
 
-	valFile = open("valout%s%sD.dat" %(ProjectName, g.NDIM))
+	valFile = open(Filenames.valout(ProjectName, g.NDIM))
 	lines = valFile.readlines()
 
 	name = f"Psi for {ProjectName}, Eval {EVAL_NUM} which is {lines[EVAL_NUM]}"
@@ -168,17 +169,17 @@ def Graph2D(Type, name, g, ZLEVEL, getSlice):
 
 
 def PotentialVoxel3D(ProjectName, level=0.0, minlev=None, maxlev=None):
-	V = np.load("Potential%s3D.npy" % (ProjectName))
+	V = np.load(Filenames.potarray(ProjectName, 3))
 	title = f"Potential for {ProjectName}"
 	Voxel3D(ProjectName, title, V, level, minlev, maxlev)
 
 
 def PsiVoxel3D(ProjectName, EVAL_NUM=0, level=None, minlev=None, maxlev=None):
-	evec = np.load("vecarray%s%sD.npy" %(ProjectName, 3))[EVAL_NUM]
+	evec = np.load(Filenames.vecarray(ProjectName, 3))[EVAL_NUM]
 
 	evec = np.square(evec)
 
-	valFile = open("valout%s%sD.dat" %(ProjectName, 3))
+	valFile = open(Filenames.valout(ProjectName, 3))
 	lines = valFile.readlines()
 
 	title = f"Psi^2 for {ProjectName}, Eval {EVAL_NUM} which is {lines[EVAL_NUM]}"
@@ -251,3 +252,33 @@ def PotentialGraphics1D(ProjectName, XLEVEL = None, YLEVEL = None, ZLEVEL = None
 	V, axisgrid = GraphicalGenerate1D(ProjectName, XLEVEL, YLEVEL, ZLEVEL, axis)
 	plt.plot(axisgrid, V)
 	plt.show()
+
+
+def PsiGraphics1D(ProjectName, XLEVEL = None, YLEVEL = None, ZLEVEL = None, axis = "z", EVAL_NUM=0):
+	g = gp.GridInfo.load(ProjectName, 3)
+	evec = np.load(Filenames.vecarray(ProjectName, g.NDIM))[EVAL_NUM]
+
+	hx, hy, hz = g.hxyz()
+	divx = round((XLEVEL - g.XMIN) / hx)
+	divy = round((YLEVEL - g.YMIN) / hy)
+	divz = round((ZLEVEL - g.ZMIN) / hz)
+
+	if axis == "x":
+		slice = evec[:, divy, divz]
+		axisgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
+	elif axis == "y":
+		slice = evec[divx, :, divz]
+		axisgrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
+	elif axis == "z":
+		slice = evec[divx, divy, :]
+		axisgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
+	else:
+		raise ValueError("Axis must be x, y, or z")
+
+	plt.plot(axisgrid, slice)
+	plt.show()
+
+
+
+
+

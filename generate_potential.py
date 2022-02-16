@@ -129,7 +129,7 @@ from atoms_from_cif import AtomsFromCif
 
 class GridInfo:
 
-	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, CifAtoms=False, AtomSrc=None, Analytic = False, UserFunction = "", Limited = True, PotentialLimit = 10000, axis = None):
+	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, Estatic=True, CifAtoms=False, AtomSrc=None, Analytic = False, UserFunction = "", Limited = True, PotentialLimit = 10000, axis = None):
 
 		# We need to check here because the load function might give None instead of letting it default
 		if XDIV == None: XDIV = 1
@@ -167,6 +167,7 @@ class GridInfo:
 		self.ZMAX = ZMAX
 		self.ZLEVEL = ZLEVEL
 		self.ZDIV = ZDIV
+		self.Estatic = Estatic
 		self.CifAtoms = CifAtoms
 		self.AtomSrc = AtomSrc
 		self.Analytic = Analytic
@@ -194,14 +195,17 @@ class GridInfo:
 			self.ZMIN = ZLEVEL
 			self.ZMAX = ZLEVEL
 
+		if Estatic and (not Analytic) and (not CifAtoms):
+			print("WARNING: Estatic potential gives bad results with sample MOF5atoms")
+
 		self.loadedFromFile = None
 		self.warned = False
 
-	def WindowAround3DPoint(SIZE, X=0.0, Y=0.0, Z=0.0, DIV=25, CifAtoms=False, AtomSrc=None, Analytic=False, UserFunction="", Limited = True, PotentialLimit = 10000.0):
+	def WindowAround3DPoint(SIZE, X=0.0, Y=0.0, Z=0.0, DIV=25, Estatic=True, CifAtoms=False, AtomSrc=None, Analytic=False, UserFunction="", Limited = True, PotentialLimit = 10000.0):
 		if type(SIZE) != float:
 			raise ValueError("SIZE must be floating-point.")
 
-		return GridInfo(3, X - SIZE/2.0, X + SIZE/2.0, DIV, 0.0, Y - SIZE/2.0, Y + SIZE/2.0, DIV, 0.0, Z - SIZE/2.0, Z + SIZE/2.0, DIV, 0.0, CifAtoms, AtomSrc, Analytic, UserFunction, Limited, PotentialLimit)
+		return GridInfo(3, X - SIZE/2.0, X + SIZE/2.0, DIV, 0.0, Y - SIZE/2.0, Y + SIZE/2.0, DIV, 0.0, Z - SIZE/2.0, Z + SIZE/2.0, DIV, 0.0, Estatic, CifAtoms, AtomSrc, Analytic, UserFunction, Limited, PotentialLimit)
 
 	def hxyz(self):
 
@@ -234,17 +238,14 @@ class GridInfo:
 		else: return MOF5atoms
 
 	def saveToFile(self, ProjectName, file):
-		print("ProjectName=%s\nNDIM=%d\nXMIN=%.8f\nXMAX=%.8f\nXDIV=%d\nXLEVEL=%.8f\nYMIN=%.8f\nYMAX=%.8f\nYDIV=%d\nYLEVEL=%.8f\nZMIN=%.8f\nZMAX=%.8f\nZDIV=%d\nZLEVEL=%.8f\nCifAtoms=%s\nAnalytic=%s\nUserFunction=%s\n Limited=%s\n PotentialLimit=%d\n Axis=%s\n" % (ProjectName, self.NDIM, self.XMIN, self.XMAX, self.XDIV, self.XLEVEL, self.YMIN, self.YMAX, self.YDIV, self.YLEVEL, self.ZMIN, self.ZMAX, self.ZDIV, self.ZLEVEL, self.CifAtoms, self.Analytic, self.UserFunction, self.Limited, self.PotentialLimit, self.axis), file=file)
+		print("ProjectName=%s\nNDIM=%d\nXMIN=%.8f\nXMAX=%.8f\nXDIV=%d\nXLEVEL=%.8f\nYMIN=%.8f\nYMAX=%.8f\nYDIV=%d\nYLEVEL=%.8f\nZMIN=%.8f\nZMAX=%.8f\nZDIV=%d\nZLEVEL=%.8f\nEstatic=%s\nCifAtoms=%s\nAnalytic=%s\nUserFunction=%s\n Limited=%s\n PotentialLimit=%d\n Axis=%s\n" % (ProjectName, self.NDIM, self.XMIN, self.XMAX, self.XDIV, self.XLEVEL, self.YMIN, self.YMAX, self.YDIV, self.YLEVEL, self.ZMIN, self.ZMAX, self.ZDIV, self.ZLEVEL, self.Estatic, self.CifAtoms, self.Analytic, self.UserFunction, self.Limited, self.PotentialLimit, self.axis), file=file)
 
 		if self.CifAtoms:
 			print(f"AtomSrcFile={self.AtomSrc.file}\nAtomSrcRadius={self.AtomSrc.radius}\nBINDING_LABEL={self.AtomSrc.BINDING_LABEL}\nORIGIN_LABEL={self.AtomSrc.ORIGIN_LABEL}\nEXCLUDED_SITES={self.AtomSrc.EXCLUDED_SITES}", file=file)
 
 
-	def getFilename(ProjectName, NDIM):
-		return "generateinfo%s%sD.dat" %(ProjectName, NDIM)
-
 	def save(self, ProjectName):
-		filename = GridInfo.getFilename(ProjectName, self.NDIM)
+		filename = Filenames.generateinfo(ProjectName, self.NDIM)
 		if filename != self.loadedFromFile: # Don't overwrite file that we loaded from
 			try:
 				f = open(filename, 'w')
@@ -254,7 +255,7 @@ class GridInfo:
 				print("WARNING: The potential file", filename, "did not save. The file you wanted to save to was already opened.")
 
 	def load(ProjectName, NDIM):
-		return GridInfo.loadFromFile(GridInfo.getFilename(ProjectName, NDIM))
+		return GridInfo.loadFromFile(Filenames.generateinfo(ProjectName, NDIM))
 	
 	"""
 	File format:
@@ -282,7 +283,7 @@ class GridInfo:
 				AtomSrc = AtomsFromCif(v['AtomSrcFile'], v['AtomSrcRadius'], v['BINDING_LABEL'], v['ORIGIN_LABEL'], v['EXCLUDED_SITES'])
 			else: AtomSrc = None
 
-			gridInfo = GridInfo(v['NDIM'], v['XMIN'], v['XMAX'], v['XDIV'], v['XLEVEL'], v['YMIN'], v['YMAX'], v['YDIV'], v['YLEVEL'], v['ZMIN'], v['ZMAX'], v['ZDIV'], v['ZLEVEL'], v['CifAtoms'], AtomSrc, v['Analytic'], v['UserFunction'])
+			gridInfo = GridInfo(v['NDIM'], v['XMIN'], v['XMAX'], v['XDIV'], v['XLEVEL'], v['YMIN'], v['YMAX'], v['YDIV'], v['YLEVEL'], v['ZMIN'], v['ZMAX'], v['ZDIV'], v['ZLEVEL'], v['Estatic'], v['CifAtoms'], AtomSrc, v['Analytic'], v['UserFunction'])
 			gridInfo.loadedFromFile = path
 			return gridInfo
 		except IOError:
@@ -327,21 +328,30 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 	startTimer("generate")
 
 	if PrintAnalysis:
-		PotentialArrayPath = "Potential%s%sD.npy" %(ProjectName, g.NDIM)
-		GenerateInfofile = "generateinfo%s%sD.dat" %(ProjectName, g.NDIM)
+		PotentialArrayPath = Filenames.potarray(ProjectName, g.NDIM)
+		GenerateInfofile = Filenames.generateinfo(ProjectName, g.NDIM)
+		PotentialAnalysisPath = Filenames.potentialAnalysis(ProjectName, g.NDIM)
 
 		checkSuccess = checkFileWriteable(PotentialArrayPath, "Potential Array", Overwrite)
 		checkSuccess &= checkFileWriteable(GenerateInfofile, "Generate Info", Overwrite)
+		checkSuccess &= checkFileWriteable(PotentialAnalysisPath, "Potential Analysis", Overwrite)
 
 		if not checkSuccess:
 			sys.exit()
 
 
 	if g.Analytic == False:
-		V = generateNumeric(g.atoms(), g)
+		x, y, z = meshgrids(g)
+		V = pointPotential(g.atoms(), g.Estatic, x, y, z)
 			       
 	elif g.Analytic == True:
 		V = generateFromUserFn(g)
+
+	# The above return 3D arrays. Now remove extra dimensions
+	if g.NDIM == 1:
+		V = np.reshape(V, V.size)
+	if g.NDIM == 2:
+		V = V[:, :, 0]
 
 	if g.Limited:
 		# V = smoothPot(chopPot(V, g.PotentialLimit), g.NDIM)
@@ -353,7 +363,8 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 	#print(V)
 	
 	if PrintAnalysis == True:
-		potentialAnalysis(g, V)
+		potAnalFile = open(PotentialAnalysisPath, "w")
+		potentialAnalysis(g, potAnalFile, V)
 
 	#-------4.7-------#
 		
@@ -362,13 +373,7 @@ def generate(ProjectName, gridInfo, Overwrite = False, PrintAnalysis = True):
 		
 		g.save(ProjectName)
 	
-	return V
-
-
-def generateNumeric(atoms, g):
-	x, y, z = meshgrids(g)
-	
-	return pointPotential(atoms, x, y, z)
+	return V	
 	
 
 #-------4.4-------#  
@@ -378,7 +383,7 @@ def generateFromUserFn(g):
 
 	try:
 		V = np.array(eval(g.UserFunction))
-		print(V)
+		# print(V)
 	except NameError:
 		raise ValueError("Invalid function. Make sure your function is a function of x, y, and z and that all non-elementary operations are proceded by 'np.'")
 		sys.exit()
@@ -389,33 +394,29 @@ def generateFromUserFn(g):
 def meshgrids(g):
 	if g.NDIM == 1 and g.axis == "z":
 		Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)	
-		z = Zgrid
-		x = g.XLEVEL
-		y = g.YLEVEL
+		Xgrid = g.XLEVEL
+		Ygrid = g.YLEVEL
 	if g.NDIM == 1 and g.axis == "x":
 		Xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
-		x = Xgrid
-		z = g.ZLEVEL
-		y = g.YLEVEL
+		Zgrid = g.ZLEVEL
+		Ygrid = g.YLEVEL
 
 	if g.NDIM == 1 and g.axis == "y":
 		Ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
-		y = Ygrid
-		x = g.XLEVEL
-		z = g.ZLEVEL
+		Xgrid = g.XLEVEL
+		Zgrid = g.ZLEVEL
 
 	if g.NDIM == 2:
 		Xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
 		Ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
-		x, y = np.meshgrid(Xgrid, Ygrid)
-		z = g.ZLEVEL
+		Zgrid = g.ZLEVEL
 	
 	if g.NDIM == 3:
 		Xgrid = np.linspace(g.XMIN, g.XMAX, g.XDIV)
 		Ygrid = np.linspace(g.YMIN, g.YMAX, g.YDIV)
 		Zgrid = np.linspace(g.ZMIN, g.ZMAX, g.ZDIV)
-		x,y,z = np.meshgrid(Xgrid, Ygrid, Zgrid)
 
+	x,y,z = np.meshgrid(Xgrid, Ygrid, Zgrid)
 	return (x, y, z)
 
 
@@ -448,13 +449,14 @@ def smoothPot(V, NDIM):
 
 
 
-def potentialAnalysis(g, V):
+def potentialAnalysis(g, file, V):
 	hx, hy, hz = g.hxyz()
+
 
 	if not np.isnan(np.sum(V)) and not np.isinf(np.sum(V)):
 		# Should we also be doing analysis if there are nans?
 
-		print("Maximum potential:", np.amax(V), "\nMinimum potential:", np.amin(V), "\nMinimum potential's array position", np.unravel_index(np.argmin(V, axis=None), V.shape))
+		doubleprint(file, "Maximum potential:", np.amax(V), "\nMinimum potential:", np.amin(V), "\nMinimum potential's array position", np.unravel_index(np.argmin(V, axis=None), V.shape))
 	
 		#result = (np.where(V == np.amin(V)))
 		result = np.unravel_index(np.argmin(V), np.shape(V))
@@ -463,16 +465,16 @@ def potentialAnalysis(g, V):
 		#FIX for axes
 		if g.NDIM == 1:
 			coord = g.ZMAX-result[0]*hz
-			print(coord)
-			#print("The z position of the minimum is", (min_list))
+			doubleprint(file, coord)
+			#doubleprint(file, "The z position of the minimum is", (min_list))
 			minimumpot = np.amin(V)
 		
 			zresult = result[0]
 			try:
 				zsecondderivative = ((V[zresult+1] - 2*minimumpot + V[zresult-1])/(hz**2))
-				print("The second partial derivative with respect to z is", zsecondderivative)
+				doubleprint(file, "The second partial derivative with respect to z is", zsecondderivative)
 			except:
-				print("Undefined second partial derivative with respect to z.")
+				doubleprint(file, "Undefined second partial derivative with respect to z.")
 				zsecondderivative = float("Nan")
 			ysecondderivative = float("Nan")
 			xsecondderivative = float("Nan")
@@ -482,7 +484,7 @@ def potentialAnalysis(g, V):
 			#for coord in listofcoordinates:
 			#    min_list.append(coord)
 
-			#print("The x,y position of the minimum is", (min_list))
+			#doubleprint(file, "The x,y position of the minimum is", (min_list))
 
 			minimumpot = np.amin(V)
 
@@ -491,65 +493,71 @@ def potentialAnalysis(g, V):
 
 			try:
 				xsecondderivative = ((V[xresult+1, yresult] - 2*minimumpot + V[xresult-1, yresult])/(hx**2))
-				print("The second partial derivative with respect to x is", xsecondderivative)
+				doubleprint(file, "The second partial derivative with respect to x is", xsecondderivative)
 			except:
-				print("Undefined second partial derivative with respect to x.")
+				doubleprint(file, "Undefined second partial derivative with respect to x.")
 				xsecondderivative = float("Nan")
 			try:
 				ysecondderivative = ((V[xresult, yresult+1] - 2*minimumpot + V[xresult, yresult-1])/(hy**2))
-				print("The second partial derivative with respect to y is", ysecondderivative)
+				doubleprint(file, "The second partial derivative with respect to y is", ysecondderivative)
 			except:
-				print("Undefined second partial derivative with respect to y.")
+				doubleprint(file, "Undefined second partial derivative with respect to y.")
 				ysecondderivative = float("Nan")
 			try: 
-				print("Del Squared is", xsecondderivative+ysecondderivative)
+				doubleprint(file, "Del Squared is", xsecondderivative+ysecondderivative)
 				delsquared = xsecondderivative+ysecondderivative
 			except:
-				print("Del Squared is undefined.")
+				doubleprint(file, "Del Squared is undefined.")
 				delsquared = float("Nan")
 			zsecondderivative = float("Nan")
 		if g.NDIM == 3:
 			listofcoordinates = list((g.XMIN+result[0]*hx, g.YMIN+result[1]*hy, g.ZMIN+result[2]*hz))
-			print(listofcoordinates)
+			doubleprint(file, listofcoordinates)
 			#for coord in listofcoordinates:
 			#    min_list.append(coord)
-			#print("The x,y,z position of the minimum is", (min_list))
+			#doubleprint(file, "The x,y,z position of the minimum is", (min_list))
 			minimumpot = np.amin(V)
 			xresult = result[0]
 			yresult = result[1]
 			zresult = result[2]
-			print(xresult, yresult, zresult)
+			doubleprint(file, xresult, yresult, zresult)
 			try:
 				xsecondderivative = ((V[xresult+1, yresult, zresult] - 2*minimumpot + V[xresult-1, yresult, zresult])/(hx**2))
-				print("The second partial derivative with respect to x is", xsecondderivative)
+				doubleprint(file, "The second partial derivative with respect to x is", xsecondderivative)
 			except:
-				print("Undefined second partial derivative with respect to x.")
+				doubleprint(file, "Undefined second partial derivative with respect to x.")
 				xsecondderivative = float("nan")
 			try:
 				ysecondderivative = ((V[xresult, yresult+1, zresult] - 2*minimumpot + V[xresult, yresult-1, zresult])/(hy**2))
-				print("The second partial derivative with respect to y is", ysecondderivative)
+				doubleprint(file, "The second partial derivative with respect to y is", ysecondderivative)
 			except:
-				print("Undefined second partial derivative with respect to y.")
+				doubleprint(file, "Undefined second partial derivative with respect to y.")
 				ysecondderivative = float("nan")
 			try:
 				zsecondderivative = ((V[xresult, yresult, zresult+1] - 2*minimumpot + V[xresult, yresult, zresult-1])/(hz**2))
-				print("The second partial derivative with respect to z is", zsecondderivative)
+				doubleprint(file, "The second partial derivative with respect to z is", zsecondderivative)
 			except:
-				print("Undefined second partial derivative with respect to z.")
+				doubleprint(file, "Undefined second partial derivative with respect to z.")
 				zsecondderivative = float("nan")
 			try: 
-				print("Del Squared is", xsecondderivative+ysecondderivative+zsecondderivative)
+				doubleprint(file, "Del Squared is", xsecondderivative+ysecondderivative+zsecondderivative)
 				delsquared = xsecondderivative+ysecondderivative+zsecondderivative
 			except:
-				print("Del Squared is undefined.")
+				doubleprint(file, "Del Squared is undefined.")
 				delsquared = float("nan")
 
 
-def pointPotential(atoms, x, y, z):
-	V = LJPotential(atoms, x, y, z) + EstaticPotential(atoms, x, y, z)
+def doubleprint(file, *args, **kwargs):
+	print(*args, **kwargs)
+	print(*args, **kwargs, file=file)
+
+
+
+def pointPotential(atoms, Estatic, x, y, z):
+	V = LJPotential(atoms, x, y, z)
+	if Estatic:
+		V += EstaticPotential(atoms, x, y, z)
 	return excludeAtoms(V, atoms, x, y, z)
-	# return EstaticPotential(atoms, x, y, z)
-	# return LJPotential(atoms, x, y, z)
 
 # Calculates in hartree then returns kelvins
 def LJPotential(atoms, xval, yval, zval):
@@ -570,13 +578,14 @@ def EstaticPotential(atoms, x, y, z):
 	# atom.charge is the partial charge of the atom,
 	# alpha is the polarization constant of the hydrogen molecule, and 
 	# Ck is coloumb's constant.
-	#E = (0.0, 0.0, 0.0)
 
-	if type(x) == np.ndarray:
+	if type(x) == np.ndarray or type(y) == np.ndarray or type(z) == np.ndarray:
 		assert(x.shape == y.shape and x.shape == z.shape)
+
 		E = (np.zeros(x.shape), np.zeros(x.shape), np.zeros(x.shape))
 	else:
 		E = (0.0, 0.0, 0.0)
+
 
 	for atom in atoms:
 		Rsquared = (x-atom.x)**2+(y-atom.y)**2+(z-atom.z)**2
