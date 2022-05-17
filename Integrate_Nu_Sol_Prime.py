@@ -32,7 +32,7 @@ USE_FEAST=False
 #Ignoring M allows for a primitive version of the Numerov method with decreased runtime but decreased eigenvalue accuracy so it is not recommended.
 #Numerov takes gridInfo as a input which contains all the user inputs specifying what the grid should look like
 
-def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=2.0, HBAR = 6.96482118, IgnoreM = True, Generate = True):
+def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=2.0, HBAR = 6.96482118, IgnoreM = True, Generate = True, GivenPot=None):
 	g = gridInfo # for shortness
 #-------5.1-------# 
 	if type(Generate) != bool: 
@@ -84,6 +84,8 @@ def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=2.0, HBAR =
 		V = generate(ProjectName, g, Overwrite)
 #-------5.6-------# 
 #loads the potential specified	
+	elif type(GivenPot) != type(None):
+		V = GivenPot
 	else:
 		V = np.load(PotentialArrayPath)
 
@@ -121,8 +123,9 @@ def numerov(ProjectName, gridInfo, Overwrite=False, N_EVAL = 1, MASS=2.0, HBAR =
 		#Transposes eigenvector array
 		evec = evec.T
 
+		print("Note: You should subtract the potential minimum from the eigenvalues to get the energy levels.")
 		#writes the outputs to a file
-		writeEigs(eval, evec, EIGENVALUES_OUT, EIGENVECTORS_OUT)
+		writeEigs(np.real(eval), np.real(evec), EIGENVALUES_OUT, EIGENVECTORS_OUT)
 
 		print("Saving Eigenvector array File...")
 		#converts the eigenvector output into a numpy array for future analysis

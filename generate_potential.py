@@ -135,7 +135,7 @@ from atoms_from_cif import AtomsFromCif
 # This class stores all the parameters needed to generate the potential.
 class GridInfo:
 
-	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, Estatic=True, CifAtoms=False, AtomSrc=None, Analytic = False, UserFunction = "", Limited = True, PotentialLimit = 10000, axis = None):
+	def __init__(self, NDIM, XMIN=0.0, XMAX=0.0, XDIV=1, XLEVEL = 0.0, YMIN=0.0, YMAX=0.0, YDIV=1, YLEVEL = 0.0, ZMIN=0.0, ZMAX=0.0, ZDIV=1, ZLEVEL = 0.0, External=True, Estatic=True, CifAtoms=False, AtomSrc=None, Analytic = False, UserFunction = "", Limited = True, PotentialLimit = 10000, axis = None):
 		"""
 		Construct a GridInfo object.
 
@@ -149,6 +149,7 @@ class GridInfo:
 		XDIV, YDIV, ZDIV specify the number of grid points along each dimension. 
 		
 		The remaining parameters specify details about how the potential is generated:
+		If External=True, then no potential is generated. The potential is instead provided to NuSol directly by the caller.
 		If Estatic=True, then the electrostatic potential is added to the potential. If Estatic=False, then only the Lennard-Jones potential is used.
 		If CifAtoms=True, then a AtomsFromCif object must be provided in AtomSrc. 
 		If Analytic=True, then UserFunction must be a string containg a Python expression providing the potential at a point as a function of x, y, and z.
@@ -193,6 +194,7 @@ class GridInfo:
 		self.ZMAX = ZMAX
 		self.ZLEVEL = ZLEVEL
 		self.ZDIV = ZDIV
+		self.External = External
 		self.Estatic = Estatic
 		self.CifAtoms = CifAtoms
 		self.AtomSrc = AtomSrc
@@ -225,7 +227,7 @@ class GridInfo:
 			self.ZMIN = ZLEVEL
 			self.ZMAX = ZLEVEL
 
-		if Estatic and (not Analytic) and (not CifAtoms):
+		if Estatic and not (External or Analytic or CifAtoms):
 			print("WARNING: Estatic potential gives bad results with sample MOF5atoms")
 
 		self.loadedFromFile = None
@@ -283,7 +285,7 @@ class GridInfo:
 		"""
 		Saves all the parameters of this GridInfo to a file.
 		"""
-		print("ProjectName=%s\nNDIM=%d\nXMIN=%.8f\nXMAX=%.8f\nXDIV=%d\nXLEVEL=%.8f\nYMIN=%.8f\nYMAX=%.8f\nYDIV=%d\nYLEVEL=%.8f\nZMIN=%.8f\nZMAX=%.8f\nZDIV=%d\nZLEVEL=%.8f\nEstatic=%s\nCifAtoms=%s\nAnalytic=%s\nUserFunction=%s\n Limited=%s\n PotentialLimit=%d\n Axis=%s\n" % (ProjectName, self.NDIM, self.XMIN, self.XMAX, self.XDIV, self.XLEVEL, self.YMIN, self.YMAX, self.YDIV, self.YLEVEL, self.ZMIN, self.ZMAX, self.ZDIV, self.ZLEVEL, self.Estatic, self.CifAtoms, self.Analytic, self.UserFunction, self.Limited, self.PotentialLimit, self.axis), file=file)
+		print("ProjectName=%s\nNDIM=%d\nXMIN=%.8f\nXMAX=%.8f\nXDIV=%d\nXLEVEL=%.8f\nYMIN=%.8f\nYMAX=%.8f\nYDIV=%d\nYLEVEL=%.8f\nZMIN=%.8f\nZMAX=%.8f\nZDIV=%d\nZLEVEL=%.8f\nExternal=%s\nEstatic=%s\nCifAtoms=%s\nAnalytic=%s\nUserFunction=%s\n Limited=%s\n PotentialLimit=%d\n Axis=%s\n" % (ProjectName, self.NDIM, self.XMIN, self.XMAX, self.XDIV, self.XLEVEL, self.YMIN, self.YMAX, self.YDIV, self.YLEVEL, self.ZMIN, self.ZMAX, self.ZDIV, self.ZLEVEL, self.External, self.Estatic, self.CifAtoms, self.Analytic, self.UserFunction, self.Limited, self.PotentialLimit, self.axis), file=file)
 
 		if self.CifAtoms:
 			print(f"AtomSrcFile={self.AtomSrc.file}\nAtomSrcRadius={self.AtomSrc.radius}\nBINDING_LABEL={self.AtomSrc.BINDING_LABEL}\nORIGIN_LABEL={self.AtomSrc.ORIGIN_LABEL}\nEXCLUDED_SITES={self.AtomSrc.EXCLUDED_SITES}", file=file)
@@ -336,7 +338,7 @@ class GridInfo:
 			else: AtomSrc = None
 
 			# Call the constructor with the relevant items of the dictionary
-			gridInfo = GridInfo(v['NDIM'], v['XMIN'], v['XMAX'], v['XDIV'], v['XLEVEL'], v['YMIN'], v['YMAX'], v['YDIV'], v['YLEVEL'], v['ZMIN'], v['ZMAX'], v['ZDIV'], v['ZLEVEL'], v['Estatic'], v['CifAtoms'], AtomSrc, v['Analytic'], v['UserFunction'], v['Limited'], v['PotentialLimit'], v['Axis'])
+			gridInfo = GridInfo(v['NDIM'], v['XMIN'], v['XMAX'], v['XDIV'], v['XLEVEL'], v['YMIN'], v['YMAX'], v['YDIV'], v['YLEVEL'], v['ZMIN'], v['ZMAX'], v['ZDIV'], v['ZLEVEL'], v['External'], v['Estatic'], v['CifAtoms'], AtomSrc, v['Analytic'], v['UserFunction'], v['Limited'], v['PotentialLimit'], v['Axis'])
 			gridInfo.loadedFromFile = path
 			return gridInfo
 		except IOError:
